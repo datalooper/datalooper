@@ -4,7 +4,7 @@ from _Framework.ControlSurface import ControlSurface
 from _Framework.InputControlElement import *
 from _Framework.EncoderElement import *
 from consts import *
-
+from cliphandler import ClipHandler
 class looper(ControlSurface):
 
 	#variables
@@ -13,10 +13,6 @@ class looper(ControlSurface):
 	param_values = []
 	cur_beat = 0
 
-	#constants
-	RESET_COMMAND = 0
-	CHANGE_STATE_COMMAND = 1
-	DOWNBEAT_COMMAND = 2
 
 	def __init__(self, c_instance):
 		super(looper, self).__init__(c_instance)
@@ -24,27 +20,38 @@ class looper(ControlSurface):
 		self.show_message("Powered by DATA Looper")
 		self.song().add_current_song_time_listener(self.on_time_change)
 		self.song().add_tracks_listener(self.on_track_change)
+		self.__clip_handler = ClipHandler(self)
 		self.scan_tracks()
 		self.live = Live.Application.get_application()
-
 
 	#Detects tracks with 'looper' in the title and listens for param changes
 	def scan_tracks(self):
 		self.log_message("scanning looper tracks")
 		tracks = self.song().tracks
+		self.__clip_handler.clearTracks()
 		for t in tracks:
-				stringPos = t.name.find('DL#')
+			for key in TRACK_KEYS:
+				stringPos = t.name.find(key)
 				if stringPos != -1:
-					#Checks for double digits
-					if(isinstance(t.name[stringPos+4 : stringPos+5], int)):
-						loopNum = int(t.name[ stringPos+3 : stringPos+5])
-					else:
-						loopNum = int(t.name[ stringPos+3 : stringPos+4])
-					if not t.devices_has_listener(self.scan_tracks):
-						t.add_devices_listener(self.scan_tracks)
-					self.link_loopers(t)
-				elif not t.name_has_listener(self.scan_tracks):
+					# #Checks for double digits
+					# if(isinstance(t.name[stringPos+4 : stringPos+5], int)):
+					# 	loopNum = int(t.name[ stringPos+3 : stringPos+5])
+					# else:
+					# 	loopNum = int(t.name[ stringPos+3 : stringPos+4])
+					if key == DATALOOPER_KEY:
+						if not t.devices_has_listener(self.scan_tracks):
+							t.add_devices_listener(self.scan_tracks)
+						self.link_loopers(t)
+					elif key == CLIPLOOPER_KEY:
+						self.link_clip_tracks(t)
+				#adds name change listener to all tracks
+				if not t.name_has_listener(self.scan_tracks):
 					t.add_name_listener(self.scan_tracks)
+	def link_clip_tracks(self, t):
+		self.__clip_handler.appendTracks(t)
+		self.log_message("Linking clip tracks")
+	def send_message(self, m):
+		self.log_message(m)
 	def link_loopers(self, t):
 		if(t.devices):
 			for device in t.devices:
@@ -59,18 +66,18 @@ class looper(ControlSurface):
 	def on_track_change(self):
 			self.scan_tracks()
 	def on_time_change(self):
-		time = self.song.get_current_beats_song_time()
-		status = 'playing' if song.is_playing else 'stopped'
+		time = self.song().get_current_beats_song_time()
+		status = 'playing' if self.song().is_playing else 'stopped'
 
 		if time.beats != self.cur_beat :
 			self.cur_beat = time.beats
-			looper_status_sysex = (240, 1, 2, 3, self.DOWNBEAT_COMMAND, 4, 0,247)
+			looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0,247)
 			self.send_midi(looper_status_sysex)
 
 	def _on_looper_param_changed(self):
 		for index, p in enumerate(self.looperParams):
 			self.log_message("Looper " + str(index) + " state: " + str(p.value))
-			looper_status_sysex = (240, 1, 2, 3, self.CHANGE_STATE_COMMAND, int(index), int(p.value),247)
+			looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, int(index), int(p.value),247)
 			self.send_midi(looper_status_sysex)
 
 	def send_midi(self, midi_event_bytes):
@@ -84,16 +91,15 @@ class looper(ControlSurface):
         forwarded in 'build_midi_map'.
         """
 		self.log_message("midi received")
-		channel = midi_bytes[0] & 15
-		cc_no = midi_bytes[1]
-		cc_value = midi_bytes[2]
-		self.log_message(channel)
-		self.log_message(cc_no)
-		self.log_message(cc_value)
+		note_num = midi_bytes[1]
+		note_val = midi_bytes[2]
 
-		if cc_no == MASTER_STOP:
-			if cc_value > 0:
+		if note_num == MASTER_STOP:
+			if note_val > 0:
 				self.song().is_playing = False
+		if note_val and note_val > 0:
+			self.__clip_handler.receive_midi_note(note_num)
+
 		if midi_bytes[0] == 240 and midi_bytes[1] == 1:
 			self.log_message("num received " + str(midi_bytes[7]))
 			self.song().tempo = midi_bytes[6]
@@ -109,4 +115,5 @@ class looper(ControlSurface):
 		"""
 		script_handle = self.__c_instance.handle()
 		self.log_message("building map")
-		Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, 13, MASTER_STOP)
+		for i in range(128):
+			Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
