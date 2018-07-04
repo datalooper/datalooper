@@ -27,32 +27,43 @@ class looper(ControlSurface):
 	#Detects tracks with 'looper' in the title and listens for param changes
 	def scan_tracks(self):
 		self.log_message("scanning looper tracks")
+		#get all tracks
 		tracks = self.song().tracks
+
+		#clear CL# identified tracks
 		self.__clip_handler.clearTracks()
+
+		#iterate through all tracks
 		for t in tracks:
+			#check for tracks with naming convention
 			for key in TRACK_KEYS:
+				#checks if key exists in name
 				stringPos = t.name.find(key)
 				if stringPos != -1:
-					# #Checks for double digits
-					# if(isinstance(t.name[stringPos+4 : stringPos+5], int)):
-					# 	loopNum = int(t.name[ stringPos+3 : stringPos+5])
-					# else:
-					# 	loopNum = int(t.name[ stringPos+3 : stringPos+4])
-					if key == DATALOOPER_KEY:
-						if not t.devices_has_listener(self.scan_tracks):
-							t.add_devices_listener(self.scan_tracks)
-						self.link_loopers(t)
-					elif key == CLIPLOOPER_KEY:
-						self.link_clip_tracks(t)
+					#Checks for double digits
+					if(isinstance(t.name[stringPos+4 : stringPos+5], int)):
+						trackNum = int(t.name[ stringPos+3 : stringPos+5])
+					else:
+						trackNum = int(t.name[ stringPos+3 : stringPos+4])
+					link_tracks(t, trackNum, key)
 				#adds name change listener to all tracks
 				if not t.name_has_listener(self.scan_tracks):
 					t.add_name_listener(self.scan_tracks)
-	def link_clip_tracks(self, t):
-		self.__clip_handler.appendTracks(t)
-		self.log_message("Linking clip tracks")
+
+	def link_tracks(self, track, trackNum, key):
+		if key == DATALOOPER_KEY:
+			self.link_loopers(track)
+		elif key == CLIPLOOPER_KEY:
+			self.__clip_handler.appendTracks(track, trackNum)
+
 	def send_message(self, m):
 		self.log_message(m)
+
 	def link_loopers(self, t):
+		#adds a listener to tracks detected as DataLoopers to rescan for looper when a devices is added
+		if not t.devices_has_listener(self.scan_tracks):
+			t.add_devices_listener(self.scan_tracks)
+		#checks for devices
 		if(t.devices):
 			for device in t.devices:
 				if device.name == "Looper":
@@ -65,6 +76,7 @@ class looper(ControlSurface):
 
 	def on_track_change(self):
 			self.scan_tracks()
+
 	def on_time_change(self):
 		time = self.song().get_current_beats_song_time()
 		status = 'playing' if self.song().is_playing else 'stopped'
