@@ -10,7 +10,6 @@ class ClipHandler:
     def __init__(self, parent):
         self.__parent = parent
         self.clip_tracks = []
-        self.last_clip = -1
 
     def disconnect(self):
         self.__parent.disconnect()
@@ -19,83 +18,92 @@ class ClipHandler:
         self.clip_tracks = []
 
     def appendTracks(self, track, trackNum):
+        #creates track objects
         self.clip_tracks.append(ClTrack(self, track, trackNum))
 
+    #receives midi notes from parent class
     def receive_midi_note(self, note_num):
-        control = (note_num - 1) % NUM_CONTROLS
-        requestedTrackNum = int((floor((note_num - 1) / NUM_CONTROLS)))
 
-        #redundant check, but wth
+        #maps note num to track control # (1-4) on DL Pedal
+        control = (note_num - 1) % NUM_CONTROLS
+
+        #maps note num to track # on DL pedal
+        requestedTrackNum = int((floor((note_num - 1) / NUM_CONTROLS))) + 1
+
+        #checks if the requested track number is in clip_tracks list
         if len(self.clip_tracks) > requestedTrackNum:
             self.handleClipAction(requestedTrackNum, control)
 
-    def onClipStatusChange(self, trackNum):
-        if self.clipSlot[trackNum].is_playing:
-            looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, trackNum , 2, 247)
-            self.__parent.send_midi(looper_status_sysex)
-
-    def onClipChange(self, trackNum):
-
-        if self.clipSlot[trackNum].has_clip:
-            if self.clipSlot[trackNum].clip.is_recording:
-                looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, trackNum , 1, 247)
-            if not self.clipSlot[trackNum].clip.playing_status_has_listener(self.onClipChange):
-                self.clipSlot[trackNum].clip.add_playing_status_listener(lambda: self.onClipStatusChange(trackNum))
-        else:
-            looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, trackNum , 4, 247)
-
-        self.__parent.send_midi(looper_status_sysex)
-
     def handleClipAction(self, requestedTrackNum, control):
-        #finds correct track based on naming convention #
-        track = next((track for track in self.clip_tracks if track.trackNum == requestedTrackNum), None)
 
+        #finds correct track object based on naming convention #
+        clTrack = next((track for track in self.clip_tracks if track.trackNum == requestedTrackNum), None)
+        self.__parent.send_message("requested " + str(requestedTrackNum) + " clip tracks len: " + str(len(self.clip_tracks)))
         looper_status_sysex = -1
 
-
         if control == RECORD_CONTROL:
-            track.clipSlot = self.findNextOpenSlot(track, requestedTrackNum)
-            if not track.clipSlot.has_clip_has_listener(self.onClipChange):
+            clTrack.clipSlot = self.findNextOpenSlot(clTrack)
+
+            #adds listener to change status led's
+            if not clTrack.clipSlot.has_clip_has_listener(self.onClipChange):
                 #Clip Playing Status Listener Not Working, so we use a 'add clip listener' then bind to the clip directly. Stupid workaround.
-                track.clipSlot.add_has_clip_listener(lambda: self.onClipChange(requestedTrackNum))
-            track.clipSlot.fire()
+                clTrack.clipSlot.add_has_clip_listener(lambda: self.onClipChange(clTrack))
+            clTrack.clipSlot.fire()
         elif control == STOP_CONTROL:
-            if track.clipSlot == -1:
-                track.clipSlot = self.findPlayingClip(track)
-            track.clipSlot.stop()
-            looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, requestedTrackNum, 0, 247)
+            if clTrack.clipSlot == -1:
+                clTrack.clipSlot = self.findPlayingClip(clTrack)
+            clTrack.clipSlot.stop()
+            looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, clTrack.trackNum-1, 0, 247)
         elif control == UNDO_CONTROL:
-            if track.clipSlot != -1:
-                track.clipSlot.fire()
+            if clTrack.clipSlot != -1:
+                clTrack.clipSlot.fire()
 
         elif control == CLEAR_CONTROL:
-            if track.clipSlot == -1:
-                track.clipSlot = self.findLastClip(track)
-            if track.clipSlot != -1 and track.clipSlot.has_clip:
-                track.clipSlot.delete_clip()
+            if clTrack.clipSlot == -1:
+                clTrack.clipSlot = self.findLastClip(clTrack)
+            if clTrack.clipSlot != -1 and clTrack.clipSlot.has_clip:
+                clTrack.clipSlot.delete_clip()
 
         if looper_status_sysex != -1:
             self.__parent.send_midi(looper_status_sysex)
 
-    def findLastClip(self, track):
-        for clip_slot in track.clip_slots:
-            if clip_slot.has_clip:
-                self.last_clip = clip_slot
+    def onClipStatusChange(self, clTrack):
+        if clTrack.clipSlot.is_playing:
+            looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, clTrack.trackNum-1, 2, 247)
+            self.__parent.send_midi(looper_status_sysex)
+
+    def onClipChange(self, clTrack):
+
+        if clTrack.clipSlot.has_clip:
+            if clTrack.clipSlot.clip.is_recording:
+                looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, clTrack.trackNum-1 , 1, 247)
+            if not clTrack.clipSlot.clip.playing_status_has_listener(self.onClipChange):
+                clTrack.clipSlot.clip.add_playing_status_listener(lambda: self.onClipStatusChange(clTrack))
+        else:
+            looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, clTrack.trackNum-1, 4, 247)
+
+        self.__parent.send_midi(looper_status_sysex)
+
+    def findLastClip(self, clTrack):
+        for clipSlot in clTrack.track.clip_slots:
+            if clipSlot.has_clip:
+                clTrack.lastClip = clipSlot
             else:
-                return self.last_clip
+                return clTrack.lastClip
         return -1
-    def findPlayingClip(self, track):
-        for clip_slot in track.clip_slots:
+
+    def findPlayingClip(self, clTrack):
+        for clip_slot in clTrack.track.clip_slots:
             if clip_slot.is_playing or clip_slot.is_recording:
                 return clip_slot
         return -1
-    def findNextOpenSlot(self, track, trackNum):
-        for clip_slot in track.clip_slots:
+    def findNextOpenSlot(self, clTrack):
+        for clip_slot in clTrack.track.clip_slots:
             if not clip_slot.has_clip or (clip_slot.has_clip and clip_slot.is_recording):
-                if self.clipSlot[trackNum] != -1:
-                    if self.clipSlot[trackNum] != clip_slot and self.clipSlot[trackNum].has_clip_has_listener(self.onClipChange):
+                if clTrack.clipSlot != -1:
+                    if clTrack.clipSlot != clip_slot and clTrack.clipSlot.has_clip_has_listener(self.onClipChange):
                         self.__parent.send_message("removing listener")
-                        self.clipSlot[trackNum].remove_has_clip_listener(self.onClipChange)
+                        clTrack.clipSlot.remove_has_clip_listener(self.onClipChange)
                 return clip_slot
         return -1
     def __on_device_parameters_changed(self):

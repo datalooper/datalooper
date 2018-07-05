@@ -5,6 +5,7 @@ from _Framework.InputControlElement import *
 from _Framework.EncoderElement import *
 from consts import *
 from cliphandler import ClipHandler
+from looperhandler import LooperHandler
 class looper(ControlSurface):
 
 	#variables
@@ -17,11 +18,25 @@ class looper(ControlSurface):
 	def __init__(self, c_instance):
 		super(looper, self).__init__(c_instance)
 		self.__c_instance = c_instance
+		#shows in Ableton footer
 		self.show_message("Powered by DATA Looper")
+
+		#listens to time changes
 		self.song().add_current_song_time_listener(self.on_time_change)
+
+		#listens to track add/remove
 		self.song().add_tracks_listener(self.on_track_change)
+
+		#creates obj to handle clip behavior
 		self.__clip_handler = ClipHandler(self)
+
+		#creates obj to handle looper behavior
+		self.__looper_handler = LooperHandler(self)
+
+		#looks for key'd tracks
 		self.scan_tracks()
+
+		#initializes base obj
 		self.live = Live.Application.get_application()
 
 	#Detects tracks with 'looper' in the title and listens for param changes
@@ -45,34 +60,33 @@ class looper(ControlSurface):
 						trackNum = int(t.name[ stringPos+3 : stringPos+5])
 					else:
 						trackNum = int(t.name[ stringPos+3 : stringPos+4])
-					link_tracks(t, trackNum, key)
+					self.link_tracks(t, trackNum, key)
 				#adds name change listener to all tracks
 				if not t.name_has_listener(self.scan_tracks):
 					t.add_name_listener(self.scan_tracks)
 
 	def link_tracks(self, track, trackNum, key):
 		if key == DATALOOPER_KEY:
-			self.link_loopers(track)
+			self.link_loopers(track, trackNum)
 		elif key == CLIPLOOPER_KEY:
+			self.log_message("found clip looper: " + track.name)
 			self.__clip_handler.appendTracks(track, trackNum)
 
 	def send_message(self, m):
 		self.log_message(m)
 
-	def link_loopers(self, t):
+	def link_loopers(self, track, trackNum):
 		#adds a listener to tracks detected as DataLoopers to rescan for looper when a devices is added
-		if not t.devices_has_listener(self.scan_tracks):
-			t.add_devices_listener(self.scan_tracks)
+		if not track.devices_has_listener(self.scan_tracks):
+			track.add_devices_listener(self.scan_tracks)
 		#checks for devices
-		if(t.devices):
-			for device in t.devices:
+		if(track.devices):
+			for device in track.devices:
 				if device.name == "Looper":
-					self.log_message("found looper: " + t.name)
-					state = device.parameters[1]
-					self.looperParams.append(device.parameters[1])
-					state.add_value_listener(self._on_looper_param_changed)
+					self.log_message("found looper: " + track.name)
+					self.__looper_handler.appendTracks(track, device, trackNum)
 				else:
-					self.log_message("Looper Device Does Not Exist on Track: " + t.name)
+					self.log_message("Looper Device Does Not Exist on Track: " + track.name)
 
 	def on_track_change(self):
 			self.scan_tracks()
@@ -86,11 +100,6 @@ class looper(ControlSurface):
 			looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0,247)
 			self.send_midi(looper_status_sysex)
 
-	def _on_looper_param_changed(self):
-		for index, p in enumerate(self.looperParams):
-			self.log_message("Looper " + str(index) + " state: " + str(p.value))
-			looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, int(index), int(p.value),247)
-			self.send_midi(looper_status_sysex)
 
 	def send_midi(self, midi_event_bytes):
 		self.__c_instance.send_midi(midi_event_bytes)
