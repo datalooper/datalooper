@@ -11,6 +11,7 @@ class LooperHandler:
     def clearTracks(self):
         for dlTrack in self.looper_tracks:
             dlTrack.device.parameters[1].remove_value_listener(self._on_looper_param_changed)
+
         self.looper_tracks = []
 
     #adds to list of track objects and manages listeners
