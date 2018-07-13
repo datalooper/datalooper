@@ -118,11 +118,14 @@ class looper(ControlSurface):
         note_num = midi_bytes[1]
         note_val = midi_bytes[2]
 
-        if note_num == MASTER_STOP:
-            if note_val > 0:
+        if note_val > 0:
+            if note_num == MASTER_STOP:
                 self.song().is_playing = False
-        if note_val and note_val > 0:
-            self.__clip_handler.receive_midi_note(note_num)
+            elif note_num == MASTER_MUTE:
+                self.log_message("muting")
+                self.__looper_handler.mute_loops()
+            elif note_val and note_val > 0:
+                self.__clip_handler.receive_midi_note(note_num)
 
         if midi_bytes[0] == 240 and midi_bytes[1] == 1:
             self.log_message("num received " + str(midi_bytes[7]))

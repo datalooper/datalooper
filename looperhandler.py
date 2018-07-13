@@ -26,3 +26,11 @@ class LooperHandler:
         self.__parent.send_message("Looper " + str(looperObj.trackNum) + " state: " + str(looperObj.device.parameters[1].value))
         looper_status_sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, looperObj.trackNum-1, int(looperObj.device.parameters[1].value),247)
         self.__parent.send_midi(looper_status_sysex)
+
+    def mute_loops(self):
+        for looper in self.looper_tracks:
+            self.__parent.send_message(looper.track.mute)
+            if looper.track.mute == 1:
+                looper.track.mute = 0
+            else:
+                looper.track.mute = 1
