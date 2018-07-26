@@ -116,17 +116,16 @@ class looper(ControlSurface):
         forwarded in 'build_midi_map'.
         """
         note_num = midi_bytes[1]
-        note_val = midi_bytes[2]
 
-        if note_val > 0:
+        if (((midi_bytes[0] & 240) == NOTE_ON_STATUS)):
             if note_num == MASTER_STOP:
                 self.song().is_playing = False
-            elif note_num == MASTER_MUTE:
-                self.log_message("muting")
-                self.__looper_handler.mute_loops()
-            elif note_val and note_val > 0:
+            else:
                 self.__clip_handler.receive_midi_note(note_num)
-
+        elif (((midi_bytes[0] & 240) == CC_STATUS)):
+            self.log_message("muting")
+            if note_num == MASTER_MUTE:
+                self.__looper_handler.mute_loops()
         if midi_bytes[0] == 240 and midi_bytes[1] == 1:
             self.log_message("num received " + str(midi_bytes[7]))
             self.song().tempo = midi_bytes[6]
@@ -144,3 +143,4 @@ class looper(ControlSurface):
         self.log_message("building map")
         for i in range(128):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
+            Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
