@@ -109,28 +109,40 @@ class looper(ControlSurface):
         self.__c_instance.send_midi(midi_event_bytes)
 
     def disconnect(self):
+        self.log_message("looper disconnecting")
+        looper_status_sysex = (240, 1, 2, 3, 0, 4, 0, 247)
+        self.send_midi(looper_status_sysex)
         super(looper, self).disconnect()
 
     def receive_midi(self, midi_bytes):
         """MIDI messages are only received through this function, when explicitly
         forwarded in 'build_midi_map'.
         """
-        note_num = midi_bytes[1]
 
         if (((midi_bytes[0] & 240) == NOTE_ON_STATUS)):
-            if note_num == MASTER_STOP:
-                self.song().is_playing = False
-            else:
-                self.__clip_handler.receive_midi_note(note_num)
+            self.receive_midi_notes(midi_bytes)
         elif (((midi_bytes[0] & 240) == CC_STATUS)):
-            self.log_message("muting")
-            if note_num == MASTER_MUTE:
+            self.receive_midi_cc(midi_bytes)
+
+        # NOT SURE WHAT THIS DOES
+        # if midi_bytes[0] == 240 and midi_bytes[1] == 1:
+        #     self.log_message("num received " + str(midi_bytes[7]))
+        #     self.song().tempo = midi_bytes[6]
+        #     self.song().signature_numerator = midi_bytes[7]
+        #     self.song().signature_denominator = midi_bytes[8]
+
+    def receive_midi_notes(self, midi_bytes):
+        note_num = midi_bytes[1]
+        if note_num == MASTER_STOP:
+            self.song().is_playing = False
+        else:
+            self.__clip_handler.receive_midi_note(note_num)
+
+    def receive_midi_cc(self, midi_bytes):
+        cc_num = midi_bytes[1]
+        if cc_num == MASTER_MUTE:
                 self.__looper_handler.mute_loops()
-        if midi_bytes[0] == 240 and midi_bytes[1] == 1:
-            self.log_message("num received " + str(midi_bytes[7]))
-            self.song().tempo = midi_bytes[6]
-            self.song().signature_numerator = midi_bytes[7]
-            self.song().signature_denominator = midi_bytes[8]
+                self.__clip_handler.mute_clips()
 
     def build_midi_map(self, midi_map_handle):
         """Live -> Script

@@ -28,6 +28,7 @@ class ClipHandler:
             self.send_message("adding audio track")
             self.clip_tracks.append(ClAudioTrack(self, track, trackNum))
 
+
     #receives midi notes from parent class
     def receive_midi_note(self, note_num):
 
@@ -63,4 +64,12 @@ class ClipHandler:
 
         elif control == CLEAR_CONTROL:
             clTrack.onClearPressed()
+
+    def mute_clips(self):
+        if len(self.clip_tracks) > 0:
+            for clip_track in self.clip_tracks:
+                if clip_track.track.mute == 1:
+                    clip_track.track.mute = 0
+                else:
+                    clip_track.track.mute = 1
 

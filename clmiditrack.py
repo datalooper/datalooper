@@ -8,6 +8,7 @@ class ClMidiTrack(cltrack.ClTrack):
         self.__parent = parent
         self.song = song
         self.trackStore = []
+        self.prevNotes = list()
 
     ### SCENARIOS ###
     # 1. No clip in memory, record starts recording and a new clip is made and selected
@@ -23,7 +24,6 @@ class ClMidiTrack(cltrack.ClTrack):
             # Scenario # 1
             self.getNewClipSlot()
             self.fireClip()
-
         elif self.clipSlot.has_clip:
             if self.clip.is_playing and not self.clip.is_recording:
                 self.__parent.send_message("going to overdub")
@@ -49,7 +49,11 @@ class ClMidiTrack(cltrack.ClTrack):
 
     def onClearPressed(self):
         self.__parent.send_message("clear pressed")
-        self.getNewClipSlot()
+        if self.clip != -1 and self.clip.is_recording:
+            self.removeClip()
+            self.__parent.send_message("Clearing Clip")
+        else:
+            self.getNewClipSlot()
 
     def overdub(self):
         self.__parent.send_message("overdubbing")
@@ -57,13 +61,19 @@ class ClMidiTrack(cltrack.ClTrack):
         for track in self.song.tracks:
             if track.name != self.track.name:
                 self.trackStore.append(TempTrack(track.name, track.arm, track.current_monitoring_state))
-                if track.current_monitoring_state == 1 and track.arm == 1:
-                    track.current_monitoring_state = 0
-                track.arm = 0
+                if track.arm == 1:
+                    track.arm = 0
+        if self.clip != -1:
+            self.clip.select_all_notes()
+            self.prevNotes.append(self.clip.get_selected_notes())
         self.song.session_record = 1
 
     def undoOverdub(self):
-        pass
+        if len(self.prevNotes) > 0:
+            self.__parent.send_message("removing overdub")
+            self.clip.select_all_notes()
+            self.clip.replace_selected_notes(self.prevNotes[-1])
+            del self.prevNotes[-1]
 
     def endOverdub(self):
         self.__parent.send_message("ending overdubbing")
@@ -73,7 +83,6 @@ class ClMidiTrack(cltrack.ClTrack):
             if track.name != self.track.name:
                 match = next((trackS for trackS in self.trackStore if track.name == trackS.name), None)
                 track.arm = match.arm
-                track.current_monitoring_state = match.current_monitoring_state
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):
