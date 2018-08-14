@@ -135,8 +135,11 @@ class looper(ControlSurface):
         note_num = midi_bytes[1]
         if note_num == MASTER_STOP:
             self.song().is_playing = False
+            self.__clip_handler.stop_all_clips()
+            self.__looper_handler.stop_all_loopers()
         else:
             self.__clip_handler.receive_midi_note(note_num)
+            self.__looper_handler.receive_midi_note(note_num)
 
     def receive_midi_cc(self, midi_bytes):
         cc_num = midi_bytes[1]

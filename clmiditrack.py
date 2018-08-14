@@ -53,6 +53,7 @@ class ClMidiTrack(cltrack.ClTrack):
             self.removeClip()
             self.__parent.send_message("Clearing Clip")
         else:
+            self.onStopPressed()
             self.getNewClipSlot()
 
     def overdub(self):

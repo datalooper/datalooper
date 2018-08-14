@@ -73,3 +73,8 @@ class ClipHandler:
                 else:
                     clip_track.track.mute = 1
 
+    def stop_all_clips(self):
+        if len(self.clip_tracks) > 0:
+            for clip_track in self.clip_tracks:
+                clip_track.onStopPressed()
+

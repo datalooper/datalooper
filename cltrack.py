@@ -74,6 +74,7 @@ class ClTrack(object):
         for clip_slot in self.track.clip_slots:
             if not clip_slot.has_clip:
                 self.clipSlot = clip_slot
+                self.clip = -1
                 if not self.clipSlot.has_clip_has_listener(self.onClipChange):
                     self.clipSlot.add_has_clip_listener(self.onClipChange)
                 self.updateTrackStatus(CLEAR_STATE)
