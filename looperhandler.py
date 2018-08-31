@@ -12,7 +12,7 @@ class LooperHandler:
     # unregisters listeners and clears looper track list
     def clearTracks(self):
         for dlTrack in self.looper_tracks:
-            dlTrack.device.parameters[1].remove_value_listener(self._on_looper_param_changed)
+            dlTrack.clearListener()
 
         self.looper_tracks = []
 
@@ -40,32 +40,3 @@ class LooperHandler:
     def send_midi(self, midi):
         self.__parent.send_midi(midi)
 
-    #receives midi notes from parent class
-    def receive_midi_note(self, note_num):
-
-        #maps note num to track control # (1-4) on DL Pedal
-        control = (note_num - 1) % NUM_CONTROLS
-
-        #maps note num to track # on DL pedal
-        requestedTrackNum = int((floor((note_num - 1) / NUM_CONTROLS))) + 1
-
-        #checks if the requested track number is in clip_tracks list
-        if len(self.looper_tracks) >= requestedTrackNum:
-            self.handleClipAction(requestedTrackNum, control)
-
-    def handleClipAction(self, requestedTrackNum, control):
-
-        #finds correct track object based on naming convention #
-        clTrack = next((track for track in self.looper_tracks if track.trackNum == requestedTrackNum), None)
-
-        if control == RECORD_CONTROL:
-            clTrack.onRecordPressed()
-
-        elif control == STOP_CONTROL:
-            clTrack.onStopPressed()
-
-        elif control == UNDO_CONTROL:
-            clTrack.onUndoPressed()
-
-        elif control == CLEAR_CONTROL:
-            clTrack.onClearPressed()

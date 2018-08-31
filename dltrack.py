@@ -25,3 +25,5 @@ class DlTrack:
         sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, self.trackNum - 1, status, 247)
         self.__parent.send_midi(sysex)
 
+    def clearListener(self):
+        self.state.remove_value_listener(self._on_looper_param_changed)

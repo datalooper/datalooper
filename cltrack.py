@@ -27,17 +27,19 @@ class ClTrack(object):
             #find currently playing clip_slot and link it to looper
             for clip_slot in self.track.clip_slots:
                 if clip_slot.is_playing or clip_slot.is_recording:
+                    self.__parent.send_message("found slot")
                     self.clipSlot = clip_slot
                     self.clip = self.clipSlot.clip
                     if not self.clipSlot.has_clip_has_listener(self.onClipChange):
                         self.clipSlot.add_has_clip_listener(self.onClipChange)
                     if not self.clip.playing_status_has_listener(self.onClipStatusChange):
                         self.clip.add_playing_status_listener(self.onClipStatusChange)
-                if clip_slot.is_playing:
-                    self.updateTrackStatus(PLAYING_STATE)
-                elif clip_slot.is_recording:
-                    self.updateTrackStatus(RECORDING_STATE)
-
+                    if clip_slot.is_playing:
+                            self.updateTrackStatus(PLAYING_STATE)
+                    elif clip_slot.is_recording:
+                        self.updateTrackStatus(RECORDING_STATE)
+                    return True
+            return False
     def onStopPressed(self):
         if self.clip != -1:
             if self.clip.is_playing:
@@ -80,6 +82,11 @@ class ClTrack(object):
                 self.updateTrackStatus(CLEAR_STATE)
                 return
 
+    def checkActiveClip(self):
+        self.clipSlot = -1
+        if not self.on_slot_fired():
+            self.getNewClipSlot()
+
     # called when a clip shows up or is removed from a clip slot
     def onClipChange(self):
         self.__parent.send_message("On Clip Change State")
@@ -94,6 +101,7 @@ class ClTrack(object):
         elif not self.clipSlot.has_clip:
             self.__parent.send_message("Clear State")
             self.updateTrackStatus(CLEAR_STATE)
+            self.checkActiveClip()
 
 
     def onClipStatusChange(self):

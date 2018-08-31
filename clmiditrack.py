@@ -59,10 +59,11 @@ class ClMidiTrack(cltrack.ClTrack):
     def overdub(self):
         self.__parent.send_message("overdubbing")
         self.updateTrackStatus(OVERDUB_STATE)
+        self.trackStore = []
         for track in self.song.tracks:
             if track.name != self.track.name:
                 self.trackStore.append(TempTrack(track.name, track.arm, track.current_monitoring_state))
-                if track.arm == 1:
+                if track.can_be_armed and track.arm == 1:
                     track.arm = 0
         if self.clip != -1:
             self.clip.select_all_notes()
@@ -83,7 +84,8 @@ class ClMidiTrack(cltrack.ClTrack):
         for track in self.song.tracks:
             if track.name != self.track.name:
                 match = next((trackS for trackS in self.trackStore if track.name == trackS.name), None)
-                track.arm = match.arm
+                if track.can_be_armed:
+                    track.arm = match.arm
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):

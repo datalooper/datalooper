@@ -61,7 +61,8 @@ class looper(ControlSurface):
                 stringPos = t.name.find(key)
                 if stringPos != -1:
                     # Checks for double digits
-                    if (isinstance(t.name[stringPos + 4: stringPos + 5], int)):
+                    if len(t.name) >= stringPos + 5 and t.name[stringPos + 4: stringPos + 5].isdigit():
+                        self.log_message("found double digits")
                         trackNum = int(t.name[stringPos + 3: stringPos + 5])
                     else:
                         trackNum = int(t.name[stringPos + 3: stringPos + 4])
@@ -139,7 +140,6 @@ class looper(ControlSurface):
             self.__looper_handler.stop_all_loopers()
         else:
             self.__clip_handler.receive_midi_note(note_num)
-            self.__looper_handler.receive_midi_note(note_num)
 
     def receive_midi_cc(self, midi_bytes):
         cc_num = midi_bytes[1]
