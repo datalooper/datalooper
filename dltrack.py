@@ -26,4 +26,9 @@ class DlTrack:
         self.__parent.send_midi(sysex)
 
     def clearListener(self):
-        self.state.remove_value_listener(self._on_looper_param_changed)
+        self.send_message(self.track.name)
+        if self.device.parameters[1].value_has_listener(self._on_looper_param_changed):
+            self.device.parameters[1].remove_value_listener(self._on_looper_param_changed)
+
+    def send_message(self, message):
+        self.__parent.send_message(message)

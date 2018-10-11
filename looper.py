@@ -53,6 +53,9 @@ class looper(ControlSurface):
         # clear CL# identified tracks
         self.__clip_handler.clearTracks()
 
+        # clear DL# identified tracks
+        self.__looper_handler.clearTracks()
+
         # iterate through all tracks
         for t in tracks:
             # check for tracks with naming convention

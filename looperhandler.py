@@ -11,20 +11,21 @@ class LooperHandler:
 
     # unregisters listeners and clears looper track list
     def clearTracks(self):
-        for dlTrack in self.looper_tracks:
-            dlTrack.clearListener()
-
         self.looper_tracks = []
 
     # adds to list of track objects and manages listeners
     def appendTracks(self, track, device, trackNum):
-        self.__parent.send_message("Looper " + str(trackNum) + " added")
+        for looper in self.looper_tracks:
+            if looper.track.name == track.name:
+                self.__parent.send_message("Looper " + str(trackNum) + " already exists")
+                return
         looperObj = DlTrack(self, track, device, trackNum)
+        self.__parent.send_message("Looper " + str(trackNum) + " added")
         self.looper_tracks.append(looperObj)
 
     def mute_loops(self):
+        self.__parent.send_message("muting loops")
         for looper in self.looper_tracks:
-            self.__parent.send_message(looper.track.mute)
             self.__parent.send_message(looper.trackNum)
             if looper.track.mute == 1:
                 looper.track.mute = 0
