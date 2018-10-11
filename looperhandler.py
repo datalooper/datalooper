@@ -25,6 +25,7 @@ class LooperHandler:
     def mute_loops(self):
         for looper in self.looper_tracks:
             self.__parent.send_message(looper.track.mute)
+            self.__parent.send_message(looper.trackNum)
             if looper.track.mute == 1:
                 looper.track.mute = 0
             else:
