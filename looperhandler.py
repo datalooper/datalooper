@@ -12,6 +12,8 @@ class LooperHandler:
     # unregisters listeners and clears looper track list
     def clearTracks(self):
         self.looper_tracks = []
+        looper_status_sysex = (240, 1, 2, 3, RESET_COMMAND, 4, 0, 247)
+        self.send_midi(looper_status_sysex)
 
     # adds to list of track objects and manages listeners
     def appendTracks(self, track, device, trackNum):
@@ -26,7 +28,6 @@ class LooperHandler:
     def mute_loops(self):
         self.__parent.send_message("muting loops")
         for looper in self.looper_tracks:
-            self.__parent.send_message(looper.trackNum)
             if looper.track.mute == 1:
                 looper.track.mute = 0
             else:

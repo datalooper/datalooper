@@ -39,8 +39,11 @@ class ClipHandler:
         requestedTrackNum = int((floor((note_num - 1) / NUM_CONTROLS))) + 1
 
         #checks if the requested track number is in clip_tracks list
-        if len(self.clip_tracks) >= requestedTrackNum:
-            self.handleClipAction(requestedTrackNum, control)
+
+        for clipTrack in self.clip_tracks:
+            if clipTrack.trackNum == requestedTrackNum:
+                self.handleClipAction(requestedTrackNum, control)
+                return
 
     def send_midi(self, midi):
         self.__parent.send_midi(midi)

@@ -18,9 +18,10 @@ class ClAudioTrack(cltrack.ClTrack):
     #################
     def onRecordPressed(self):
         self.__parent.send_message("record pressed")
-        if self.clipSlot == -1:
+        if self.clipSlot == -1 or self.clipSlot.is_playing and not self.clipSlot.is_recording:
             self.getNewClipSlot()
-        self.fireClip()
+        if not self.clipSlot.is_playing or self.clipSlot.is_recording:
+            self.fireClip()
 
     def onClearPressed(self):
         if self.clipSlot != -1 and self.clipSlot.has_clip:

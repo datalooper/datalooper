@@ -61,10 +61,14 @@ class ClMidiTrack(cltrack.ClTrack):
         self.updateTrackStatus(OVERDUB_STATE)
         self.trackStore = []
         for track in self.song.tracks:
-            if track.name != self.track.name:
+            if track.name != self.track.name and track.can_be_armed:
                 self.trackStore.append(TempTrack(track.name, track.arm, track.current_monitoring_state))
-                if track.can_be_armed and track.arm == 1:
+                self.__parent.send_message(track.name + " " + str(track.current_monitoring_state))
+                if track.arm == 1:
                     track.arm = 0
+                    if track.current_monitoring_state == 1:
+                        #TODO also need to check if clip is playing
+                        track.current_monitoring_state = 0
         if self.clip != -1:
             self.clip.select_all_notes()
             self.prevNotes.append(self.clip.get_selected_notes())
@@ -84,6 +88,8 @@ class ClMidiTrack(cltrack.ClTrack):
         for track in self.song.tracks:
             if track.name != self.track.name:
                 match = next((trackS for trackS in self.trackStore if track.name == trackS.name), None)
+                if match is not None:
+                    track.current_monitoring_state = match.current_monitoring_state
                 if track.can_be_armed:
                     track.arm = match.arm
 
