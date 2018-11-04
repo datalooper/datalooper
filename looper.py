@@ -6,8 +6,7 @@ from _Framework.EncoderElement import *
 from consts import *
 from cliphandler import ClipHandler
 from looperhandler import LooperHandler
-
-
+import math
 class looper(ControlSurface):
     # variables
     looperParams = []
@@ -93,17 +92,35 @@ class looper(ControlSurface):
             for device in track.devices:
                 if device.name == "Looper":
                     self.log_message("found looper: " + track.name)
-                    self.__looper_handler.appendTracks(track, device, trackNum)
+                    self.__looper_handler.appendTracks(track, device, trackNum, self.song())
                 else:
                     self.log_message("Looper Device Does Not Exist on Track: " + track.name)
+
+    def set_bpm(self, bpm):
+        # self.jump_to_downbeat(bpm)
+        self.song().tempo = bpm
+
+    def jump_to_downbeat(self, bpm):
+        curTime = self.song().current_song_time
+        self.send_message("cur time" + str(curTime))
+        min = curTime / 60
+        self.send_message("old beats " + str(bpm*min))
+        beats = math.ceil(bpm * min)
+        if beats % self.song().signature_denominator != 0:
+            beats = self.song().signature_denominator - beats % self.song().signature_denominator
+        self.send_message("new beats " + str(beats))
+        newTime = (beats / bpm) * 60
+        self.send_message("new time" + str(newTime))
+        self.song().current_song_time = newTime
 
     def on_track_change(self):
         self.scan_tracks()
 
     def on_time_change(self):
         time = self.song().get_current_beats_song_time()
-        status = 'playing' if self.song().is_playing else 'stopped'
-
+        totalTicks = (time.bars - 1) * 960 + (time.beats -1 )*240 + (time.sub_division - 1) *60 + time.ticks
+        self.__looper_handler.send_time(totalTicks)
+        #self.send_message(time)
         if time.beats != self.cur_beat:
             self.cur_beat = time.beats
             looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0, 247)
@@ -138,11 +155,13 @@ class looper(ControlSurface):
     def receive_midi_notes(self, midi_bytes):
         note_num = midi_bytes[1]
         if note_num == MASTER_STOP:
-            self.song().is_playing = False
+            # self.song().is_playing = False
             self.__clip_handler.stop_all_clips()
             self.__looper_handler.stop_all_loopers()
         else:
             self.__clip_handler.receive_midi_note(note_num)
+            self.__looper_handler.receive_midi_note(note_num)
+
 
     def receive_midi_cc(self, midi_bytes):
         cc_num = midi_bytes[1]
@@ -162,3 +181,9 @@ class looper(ControlSurface):
         for i in range(128):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
+
+    def handle_sysex(self, sysex):
+        self.send_message("sysex received")
+
+    def receive_midi(self, midi_bytes):
+        self.send_message(midi_bytes)
