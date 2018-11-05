@@ -4,9 +4,10 @@ from _Framework.ControlSurface import ControlSurface
 from _Framework.InputControlElement import *
 from _Framework.EncoderElement import *
 from consts import *
-from cliphandler import ClipHandler
-from looperhandler import LooperHandler
+from trackhandler import TrackHandler
 import math
+
+
 class looper(ControlSurface):
     # variables
     looperParams = []
@@ -26,11 +27,8 @@ class looper(ControlSurface):
         # listens to track add/remove
         self.song().add_tracks_listener(self.on_track_change)
 
-        # creates obj to handle clip behavior
-        self.__clip_handler = ClipHandler(self, self.song())
-
-        # creates obj to handle looper behavior
-        self.__looper_handler = LooperHandler(self)
+        # creates obj to handle tracks
+        self.__track_handler = TrackHandler(self, self.song())
 
         # looks for key'd tracks
         self.scan_tracks()
@@ -50,84 +48,54 @@ class looper(ControlSurface):
         tracks = self.song().tracks
 
         # clear CL# identified tracks
-        self.__clip_handler.clearTracks()
-
-        # clear DL# identified tracks
-        self.__looper_handler.clearTracks()
+        self.__track_handler.clear_tracks()
 
         # iterate through all tracks
-        for t in tracks:
+        for track in tracks:
             # check for tracks with naming convention
             for key in TRACK_KEYS:
                 # checks if key exists in name
-                stringPos = t.name.find(key)
-                if stringPos != -1:
+                string_pos = track.name.find(key)
+                if string_pos != -1:
                     # Checks for double digits
-                    if len(t.name) >= stringPos + 5 and t.name[stringPos + 4: stringPos + 5].isdigit():
-                        self.log_message("found double digits")
-                        trackNum = int(t.name[stringPos + 3: stringPos + 5])
+                    if len(track.name) >= string_pos + 5 and track.name[string_pos + 4: string_pos + 5].isdigit():
+                        track_num = int(track.name[string_pos + 3: string_pos + 5])
                     else:
-                        trackNum = int(t.name[stringPos + 3: stringPos + 4])
-                    self.link_tracks(t, trackNum, key)
+                        track_num = int(track.name[string_pos + 3: string_pos + 4])
+                    self.__track_handler.append_tracks(track, track_num, key)
                 # adds name change listener to all tracks
-                if not t.name_has_listener(self.scan_tracks):
-                    t.add_name_listener(self.scan_tracks)
-
-    def link_tracks(self, track, trackNum, key):
-        if key == DATALOOPER_KEY:
-            self.link_loopers(track, trackNum)
-        elif key == CLIPLOOPER_KEY:
-            self.log_message("found clip looper: " + track.name)
-            self.__clip_handler.appendTracks(track, trackNum)
+                if not track.name_has_listener(self.scan_tracks):
+                    track.add_name_listener(self.scan_tracks)
 
     def send_message(self, m):
         self.log_message(m)
-
-    def link_loopers(self, track, trackNum):
-        # adds a listener to tracks detected as DataLoopers to rescan for looper when a devices is added
-        if not track.devices_has_listener(self.scan_tracks):
-            track.add_devices_listener(self.scan_tracks)
-        # checks for devices
-        if (track.devices):
-            for device in track.devices:
-                if device.name == "Looper":
-                    self.log_message("found looper: " + track.name)
-                    self.__looper_handler.appendTracks(track, device, trackNum, self.song())
-                else:
-                    self.log_message("Looper Device Does Not Exist on Track: " + track.name)
 
     def set_bpm(self, bpm):
         # self.jump_to_downbeat(bpm)
         self.song().tempo = bpm
 
-    def jump_to_downbeat(self, bpm):
-        curTime = self.song().current_song_time
-        self.send_message("cur time" + str(curTime))
-        min = curTime / 60
-        self.send_message("old beats " + str(bpm*min))
-        beats = math.ceil(bpm * min)
-        if beats % self.song().signature_denominator != 0:
-            beats = self.song().signature_denominator - beats % self.song().signature_denominator
-        self.send_message("new beats " + str(beats))
-        newTime = (beats / bpm) * 60
-        self.send_message("new time" + str(newTime))
-        self.song().current_song_time = newTime
+    # def jump_to_downbeat(self, bpm):
+    #     curTime = self.song().current_song_time
+    #     self.send_message("cur time" + str(curTime))
+    #     min = curTime / 60
+    #     self.send_message("old beats " + str(bpm*min))
+    #     beats = math.ceil(bpm * min)
+    #     if beats % self.song().signature_denominator != 0:
+    #         beats = self.song().signature_denominator - beats % self.song().signature_denominator
+    #     self.send_message("new beats " + str(beats))
+    #     newTime = (beats / bpm) * 60
+    #     self.send_message("new time" + str(newTime))
+    #     self.song().current_song_time = newTime
 
     def on_track_change(self):
         self.scan_tracks()
 
     def on_time_change(self):
         time = self.song().get_current_beats_song_time()
-        totalTicks = (time.bars - 1) * 960 + (time.beats -1 )*240 + (time.sub_division - 1) *60 + time.ticks
-        self.__looper_handler.send_time(totalTicks)
-        #self.send_message(time)
         if time.beats != self.cur_beat:
             self.cur_beat = time.beats
             looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0, 247)
-            self.send_midi(looper_status_sysex)
-
-    def send_midi(self, midi_event_bytes):
-        self.__c_instance.send_midi(midi_event_bytes)
+            #self.send_midi(looper_status_sysex)
 
     def disconnect(self):
         self.log_message("looper disconnecting")
@@ -135,39 +103,23 @@ class looper(ControlSurface):
         self.send_midi(looper_status_sysex)
         super(looper, self).disconnect()
 
+    def send_midi(self, midi_event_bytes):
+        self.__c_instance.send_midi(midi_event_bytes)
+
+    def send_sysex(self, looper, control, data):
+        looper_status_sysex = (240, looper, control, 3, data, 247)
+        self.send_midi(looper_status_sysex)
+
     def receive_midi(self, midi_bytes):
         """MIDI messages are only received through this function, when explicitly
         forwarded in 'build_midi_map'.
         """
-
         if (((midi_bytes[0] & 240) == NOTE_ON_STATUS)):
             self.receive_midi_notes(midi_bytes)
         elif (((midi_bytes[0] & 240) == CC_STATUS)):
             self.receive_midi_cc(midi_bytes)
-
-        # NOT SURE WHAT THIS DOES
-        # if midi_bytes[0] == 240 and midi_bytes[1] == 1:
-        #     self.log_message("num received " + str(midi_bytes[7]))
-        #     self.song().tempo = midi_bytes[6]
-        #     self.song().signature_numerator = midi_bytes[7]
-        #     self.song().signature_denominator = midi_bytes[8]
-
-    def receive_midi_notes(self, midi_bytes):
-        note_num = midi_bytes[1]
-        if note_num == MASTER_STOP:
-            # self.song().is_playing = False
-            self.__clip_handler.stop_all_clips()
-            self.__looper_handler.stop_all_loopers()
-        else:
-            self.__clip_handler.receive_midi_note(note_num)
-            self.__looper_handler.receive_midi_note(note_num)
-
-
-    def receive_midi_cc(self, midi_bytes):
-        cc_num = midi_bytes[1]
-        if cc_num == MASTER_MUTE:
-                self.__looper_handler.mute_loops()
-                self.__clip_handler.mute_clips()
+        elif len(midi_bytes) != 3:
+            self.handle_sysex(midi_bytes)
 
     def build_midi_map(self, midi_map_handle):
         """Live -> Script
@@ -182,8 +134,53 @@ class looper(ControlSurface):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
 
-    def handle_sysex(self, sysex):
-        self.send_message("sysex received")
+    def receive_midi_notes(self, midi_bytes):
+        note_num = midi_bytes[1]
 
-    def receive_midi(self, midi_bytes):
-        self.send_message(midi_bytes)
+    def receive_midi_cc(self, midi_bytes):
+        cc_num = midi_bytes[1]
+
+    def handle_sysex(self, midi_bytes):
+        # ex: [0xF0, 0x41, looper instance, looper number, control number, 0x12, press/release/long press, long press seconds]
+        # [0] : generic
+        # [1] : generic
+        # [2] : looper instance
+        # [3] : looper number
+        # [4] : control number
+        # [5] : receiving (generic)
+        # [6] : press/release/long press
+        # [7] : long press seconds
+
+        self.send_message("sysex received: " + str(midi_bytes))
+        instance = midi_bytes[2]
+        looper_num = midi_bytes[3]
+        control_num = midi_bytes[4]
+        action = midi_bytes[6]
+        if action == 2:
+            long_press_seconds = midi_bytes[7]
+        else:
+            long_press_seconds = 0
+        data = [instance, looper_num, control_num, action, long_press_seconds]
+
+        address_map = {
+            (-1, -1, 0, 0, 0): self.__track_handler.record,
+            (-1, -1, 1, 0, 0): self.__track_handler.stop,
+            (-1, -1, 2, 0, 0): self.__track_handler.undo,
+            (-1, -1, 1, 2, 1): self.__track_handler.clear,
+            (-1, 0, 3, 0, 0): self.__track_handler.clear_all,
+            (-1, 0, 3, 2, 2): self.__track_handler.new_session
+        }
+
+        needle = ()
+        for keys in address_map.keys():
+            for idx, key in enumerate(keys):
+                if key != -1 and key != data[idx]:
+                    break
+                elif len(keys) - 1 == idx:
+                    needle = keys
+
+        # Get the function from switcher dictionary
+        func = address_map.get(needle)
+        # Execute the function
+        if func is not None:
+            print func(instance, looper_num)

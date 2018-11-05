@@ -1,31 +1,30 @@
 from consts import *
 from time import time
 import Live
-class DlTrack:
+from track import Track
+
+
+class DlTrack(Track):
     """ Class handling looper track from DataLooper """
 
     def __init__(self, parent, track, device, trackNum, song):
-        self.__parent = parent
-        self.track = track
+        super(DlTrack, self).__init__(parent, track, trackNum, song)
         self.device = device
-        self.trackNum = trackNum
         self.state = device.parameters[STATE]
         self.lastState = CLEAR_STATE
         self.state.add_value_listener(self._on_looper_param_changed)
         self.rectime = 0
-        self.song = song
         self.nextQuantize = -1
+        self.__parent = parent
         self.quantizeTicks = -1
         self._notification_timer = -1
 
-    #some weird logic has to happen because Ableton doesn't differenciate between clear and stop state. We have to make an educated guess.
+    # some weird logic has to happen because Ableton doesn't differenciate between clear and stop state. We have to make an educated guess.
     def _on_looper_param_changed(self):
-        self.__parent.send_message("Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value))
-        self.updateTrackStatus(self.lastState)
+        self.__parent.send_message(
+            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value))
+        self.update_track_status(self.lastState)
 
-    def updateTrackStatus(self, status):
-        sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, self.trackNum - 1, status, 247)
-        self.__parent.send_midi(sysex)
 
     def clearListener(self):
         self.send_message(self.track.name)
@@ -35,7 +34,6 @@ class DlTrack:
     def send_message(self, message):
         self.__parent.send_message(message)
 
-
     def updateState(self, state):
         if state == CLEAR_STATE:
             self.state.value = STOP_STATE
@@ -43,8 +41,9 @@ class DlTrack:
             self.state.value = state
         self.lastState = state
 
-    def onRecordPressed(self):
-        self.__parent.send_message("Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
+    def record(self):
+        self.__parent.send_message(
+            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         self.quantizeTicks = self.convertToTicks(self.device.parameters[QUANTIZATION].value)
         if self.lastState == PLAYING_STATE:
             self.updateState(OVERDUB_STATE)
@@ -55,20 +54,23 @@ class DlTrack:
         else:
             self.quantizeTrigger()
 
-    def onStopPressed(self):
-        self.__parent.send_message("Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
+    def stop(self):
+        self.__parent.send_message(
+            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
         if self.lastState == RECORDING_STATE:
             self.updateState(CLEAR_STATE)
         else:
             self.updateState(STOP_STATE)
-        #todo clean this up, follow tempo
+        # todo clean this up, follow tempo
         self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
 
-    def onUndoPressed(self):
-        self.__parent.send_message("Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
+    def undo(self):
+        self.__parent.send_message(
+            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
 
-    def onClearPressed(self):
-        self.__parent.send_message("Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " clear pressed")
+    def clear(self):
+        self.__parent.send_message(
+            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " clear pressed")
         self.updateState(CLEAR_STATE)
 
     def calculateBPM(self):
@@ -77,8 +79,8 @@ class DlTrack:
         bpm8 = 8 / recmin
         bpm16 = 16 / recmin
         bpms = [bpm4, bpm8, bpm16]
-        bpm = min(bpms, key=lambda x:abs(x-120))
-        #self.__parent.set_bpm(bpm)
+        bpm = min(bpms, key=lambda x: abs(x - 120))
+        # self.__parent.set_bpm(bpm)
 
     def quantizeTrigger(self):
         ms = self.getMS()
@@ -92,7 +94,8 @@ class DlTrack:
         return ms
 
     def setTimer(self):
-        self._notification_timer = Live.Base.Timer(callback=self.trigger_record, interval=int(self.nextQuantize), repeat=False)
+        self._notification_timer = Live.Base.Timer(callback=self.trigger_record, interval=int(self.nextQuantize),
+                                                   repeat=False)
         self._notification_timer.start()
 
     def trigger_record(self):
@@ -106,9 +109,6 @@ class DlTrack:
             self.rectime = time()
         elif self.lastState == STOP_STATE:
             self.updateState(PLAYING_STATE)
-
-    def onTimeChange(self, ticks):
-        pass
 
     def convertToTicks(self, value):
         if value == NONE:
@@ -141,4 +141,3 @@ class DlTrack:
             return 45
         elif value == THIRTY_SECOND_NOTE:
             return 30
-

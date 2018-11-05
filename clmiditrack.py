@@ -1,10 +1,11 @@
 import cltrack
-import Live
 from consts import *
+
+
 class ClMidiTrack(cltrack.ClTrack):
 
     def __init__(self, parent, track, trackNum, song):
-        super(ClMidiTrack, self).__init__(parent, track, trackNum)
+        super(ClMidiTrack, self).__init__(parent, track, trackNum, song)
         self.__parent = parent
         self.song = song
         self.trackStore = []
@@ -67,7 +68,7 @@ class ClMidiTrack(cltrack.ClTrack):
                 if track.arm == 1:
                     track.arm = 0
                     if track.current_monitoring_state == 1:
-                        #TODO also need to check if clip is playing
+                        # TODO also need to check if clip is playing
                         track.current_monitoring_state = 0
         if self.clip != -1:
             self.clip.select_all_notes()
@@ -92,6 +93,7 @@ class ClMidiTrack(cltrack.ClTrack):
                     track.current_monitoring_state = match.current_monitoring_state
                 if track.can_be_armed:
                     track.arm = match.arm
+
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):

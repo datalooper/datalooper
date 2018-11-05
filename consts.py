@@ -8,13 +8,13 @@ STOP_CONTROL = 1
 UNDO_CONTROL = 2
 CLEAR_CONTROL = 3
 RESET_COMMAND = 0
+
 CHANGE_STATE_COMMAND = 1
 DOWNBEAT_COMMAND = 2
 DATALOOPER_KEY = 'DL#'
 CLIPLOOPER_KEY = 'CL#'
 TRACK_KEYS = [DATALOOPER_KEY, CLIPLOOPER_KEY]
 
-CLEAR_STATE = 4
 NOTE_OFF_STATUS = 128
 NOTE_ON_STATUS = 144
 CC_STATUS = 176
@@ -45,6 +45,9 @@ STOP_STATE = 0
 RECORDING_STATE = 1
 PLAYING_STATE = 2
 OVERDUB_STATE = 3
+CLEAR_STATE = 4
+OFF_STATE = 5
+NEW_SESSION_STATE = 6
 
 FEEDBACK = 2
 REVERSE = 3
@@ -61,7 +64,46 @@ SET_AND_FOLLOW_SONG_TEMPO = 2
 TEMPO_CONTROL = 8
 
 
+LOOPER_TRACK = 0
+CLIP_TRACK = 1
+
 # 30 ticks to 1/32 note
 # bar : quarter notes : sixteenth notes : (ticks / 30 ) = 32 notes
 
 # bar * 960 | quarter  * 240 | sixteenth * 60
+
+
+# DATALOOPER SYSEX PROTOCOL ADDRESS MAP#
+
+PROGRAM_STATE = 0
+MASTER_COMMAND = 1
+LOOPER_COMMAND = 2
+MODE_SWITCH_COMMAND = 3
+TIME_COMMAND = 4
+# 00 00 00 program state
+#   -initialize 00
+#   -exit 01
+# 00 00 01 master commands
+#   -stop all 00
+#   -clear all 01
+#   -mute all 02
+# 00 00 02 looper 1
+#   -rec/play/ovr 00
+#   -stop 01
+#   -undo/redo 02
+#   -clear 03
+# 00 00 03 looper 2
+#   -rec/play/ovr 00
+#   -stop 01
+#   -undo/redo 02
+#   -clear 03
+# 00 00 04 looper 3
+#   -rec/play/ovr 00
+#   -stop 01
+#   -undo/redo 02
+#   -clear 03
+# 00 00 05 mode switch
+#   -enter new session mode
+#   -enter config mode
+# 00 00 07 time
+#   -on downbeat

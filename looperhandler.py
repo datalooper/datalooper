@@ -79,7 +79,3 @@ class LooperHandler:
 
         elif control == CLEAR_CONTROL:
             loop_track.onClearPressed()
-
-    def send_time(self, ticks):
-        for looperTrack in self.looper_tracks:
-            looperTrack.onTimeChange(ticks)

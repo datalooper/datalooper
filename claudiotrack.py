@@ -1,5 +1,6 @@
 import cltrack
 
+
 ### Controls ###
 # 1. Record : Will record a new clip
 # 2. Stop : Will stop the recorded clip
@@ -7,8 +8,8 @@ import cltrack
 # 4. Clear : Clear will clear the current clip
 #################
 class ClAudioTrack(cltrack.ClTrack):
-    def __init__(self, parent, track, trackNum):
-        super(ClAudioTrack, self).__init__(parent, track, trackNum)
+    def __init__(self, parent, track, trackNum, song):
+        super(ClAudioTrack, self).__init__(parent, track, trackNum, song)
         self.__parent = parent
 
     ### SCENARIOS ###
