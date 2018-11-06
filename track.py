@@ -10,14 +10,13 @@ class Track(object):
         self.trackNum = trackNum
         self.lastState = CLEAR_STATE
         self.song = song
+        self.req_record = 0
 
     def _on_looper_param_changed(self):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value))
         self.update_track_status(self.lastState)
 
     def update_track_status(self, status):
-        self.send_sysex(self.trackNum % NUM_TRACKS, CHANGE_STATE_COMMAND, status)
+        pass
 
     def send_sysex(self, looper, control, data):
         self.__parent.send_sysex(looper, control, data)

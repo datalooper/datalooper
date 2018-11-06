@@ -17,17 +17,17 @@ class ClAudioTrack(cltrack.ClTrack):
     # 2. Clip is already in memory and recording, meaning clip will play
     # 3. Clip is playing, new clip found and recording starts
     #################
-    def onRecordPressed(self):
+    def record(self):
         self.__parent.send_message("record pressed")
         if self.clipSlot == -1 or self.clipSlot.is_playing and not self.clipSlot.is_recording:
             self.getNewClipSlot()
         if not self.clipSlot.is_playing or self.clipSlot.is_recording:
             self.fireClip()
 
-    def onClearPressed(self):
+    def clear(self):
         if self.clipSlot != -1 and self.clipSlot.has_clip:
             self.clipSlot.delete_clip()
 
-    def onUndoPressed(self):
+    def undo(self):
         self.onStopPressed()
         self.getNewClipSlot()

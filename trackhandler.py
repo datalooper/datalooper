@@ -39,7 +39,7 @@ class TrackHandler:
                 self.tracks.append(ClMidiTrack(self, track, trackNum, self.song))
             elif track.has_audio_input:
                 self.send_message("adding clip audio track")
-                self.tracks.append(ClAudioTrack(self, track, trackNum))
+                self.tracks.append(ClAudioTrack(self, track, trackNum, self.song))
 
     def send_midi(self, midi):
         self.__parent.send_midi(midi)
@@ -49,25 +49,31 @@ class TrackHandler:
 
     def get_track(self, instance, looper_num):
         req_track = instance * 3 + looper_num + 1
+        tracks = []
         for track in self.tracks:
             self.send_message(str(req_track) + " :" + str(track.trackNum))
             if track.trackNum == req_track:
-                return track
+                tracks.append(track)
+        return tracks
 
     def record(self, instance, looper_num):
-        self.get_track(instance, looper_num).record()
         self.send_message("recording")
+        for track in self.get_track(instance, looper_num):
+            track.record()
 
     def stop(self, instance, looper_num):
         self.send_message("stop")
-        self.get_track(instance, looper_num).stop()
+        for track in self.get_track(instance, looper_num):
+            track.stop()
 
     def undo(self, instance, looper_num):
-        self.get_track(instance, looper_num).undo()
+        for track in self.get_track(instance, looper_num):
+            track.undo()
         self.send_message("undo")
 
     def clear(self, instance, looper_num):
-        self.get_track(instance, looper_num).clear()
+        for track in self.get_track(instance, looper_num):
+            track.clear()
         self.send_message("clear")
 
     def clear_all(self, instance, looper_num):
@@ -81,59 +87,3 @@ class TrackHandler:
         self.__parent.send_sysex(looper, control, data)
 
 
-    # def master_commands(self, datalooper_num, command):
-    #     address_map = {
-    #         0: stop_pressed,
-    #         1: clear_pressed,
-    #         2: toggle_mute
-    #     }
-    #     func = address_map.get(command, lambda: "Invalid Data")
-    #     for track in self.tracks:
-    #         print track.func(datalooper_num)
-
-    # receives midi notes from parent class
-    # def receive_midi_note(self, note_num):
-    #
-    #     # maps note num to track control # (1-4) on DL Pedal
-    #     control = (note_num - 1) % NUM_CONTROLS
-    #
-    #     # maps note num to track # on DL pedal
-    #     requestedTrackNum = int((floor((note_num - 1) / NUM_CONTROLS))) + 1
-    #
-    #     # checks if the requested track number is in clip_tracks list
-    #
-    #     for clipTrack in self.clip_tracks:
-    #         if clipTrack.trackNum == requestedTrackNum:
-    #             self.handleClipAction(requestedTrackNum, control)
-    #             return
-
-    # def handleClipAction(self, requestedTrackNum, control):
-    #
-    #     # finds correct track object based on naming convention #
-    #     clTrack = next((track for track in self.clip_tracks if track.trackNum == requestedTrackNum), None)
-    #     # self.__parent.send_message("requested " + str(requestedTrackNum) + " clip tracks len: " + str(len(self.clip_tracks)))
-    #
-    #     if control == RECORD_CONTROL:
-    #         clTrack.onRecordPressed()
-    #
-    #     elif control == STOP_CONTROL:
-    #         clTrack.onStopPressed()
-    #
-    #     elif control == UNDO_CONTROL:
-    #         clTrack.onUndoPressed()
-    #
-    #     elif control == CLEAR_CONTROL:
-    #         clTrack.onClearPressed()
-
-    # def mute_clips(self):
-    #     if len(self.clip_tracks) > 0:
-    #         for clip_track in self.clip_tracks:
-    #             if clip_track.track.mute == 1:
-    #                 clip_track.track.mute = 0
-    #             else:
-    #                 clip_track.track.mute = 1
-    #
-    # def stop_all_clips(self):
-    #     if len(self.clip_tracks) > 0:
-    #         for clip_track in self.clip_tracks:
-    #             clip_track.onStopPressed()

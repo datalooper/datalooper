@@ -43,7 +43,7 @@ class ClTrack(Track):
                     return True
             return False
 
-    def onStopPressed(self):
+    def stop(self):
         if self.clip != -1:
             if self.clip.is_playing:
                 self.__parent.send_message("Stopping Clip")

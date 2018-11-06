@@ -2,7 +2,7 @@ from consts import *
 from time import time
 import Live
 from track import Track
-
+import thread
 
 class DlTrack(Track):
     """ Class handling looper track from DataLooper """
@@ -19,18 +19,6 @@ class DlTrack(Track):
         self.quantizeTicks = -1
         self._notification_timer = -1
 
-    # some weird logic has to happen because Ableton doesn't differenciate between clear and stop state. We have to make an educated guess.
-    def _on_looper_param_changed(self):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value))
-        self.update_track_status(self.lastState)
-
-
-    def clearListener(self):
-        self.send_message(self.track.name)
-        if self.device.parameters[STATE].value_has_listener(self._on_looper_param_changed):
-            self.device.parameters[STATE].remove_value_listener(self._on_looper_param_changed)
-
     def send_message(self, message):
         self.__parent.send_message(message)
 
@@ -40,6 +28,8 @@ class DlTrack(Track):
         else:
             self.state.value = state
         self.lastState = state
+        self.send_message("updating LED " + str(self.lastState))
+        self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
 
     def record(self):
         self.__parent.send_message(
@@ -62,7 +52,7 @@ class DlTrack(Track):
         else:
             self.updateState(STOP_STATE)
         # todo clean this up, follow tempo
-        self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
+        #self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
 
     def undo(self):
         self.__parent.send_message(
@@ -83,32 +73,49 @@ class DlTrack(Track):
         # self.__parent.set_bpm(bpm)
 
     def quantizeTrigger(self):
+        self.send_message("quantize trigger")
         ms = self.getMS()
         quantizeMS = self.quantizeTicks * 60000 / (self.song.tempo * 240.)
-        self.nextQuantize = quantizeMS - (ms % quantizeMS)
-        self.setTimer()
+        nextQuantize = quantizeMS - (ms % quantizeMS)
+        self.setTimer(nextQuantize)
 
     def getMS(self):
         time = self.song.get_current_smpte_song_time(Live.Song.TimeFormat.ms_time)
         ms = int(time.hours) * 3600000 + int(time.minutes) * 60000 + int(time.seconds) * 1000 + int(time.frames)
         return ms
 
-    def setTimer(self):
-        self._notification_timer = Live.Base.Timer(callback=self.trigger_record, interval=int(self.nextQuantize),
+    def setTimer(self, interval):
+        self.send_message("setting timer for: " + str(interval) + " ms")
+        self._notification_timer = Live.Base.Timer(callback=self.trigger_record, interval=int(interval),
                                                    repeat=False)
         self._notification_timer.start()
 
     def trigger_record(self):
+        self.send_message("triggering record")
         if self.lastState == RECORDING_STATE:
             self.rectime = time() - self.rectime
             self.calculateBPM()
             self.updateState(PLAYING_STATE)
-            self.device.parameters[TEMPO_CONTROL].value = SET_AND_FOLLOW_SONG_TEMPO
+            #self.device.parameters[TEMPO_CONTROL].value = SET_AND_FOLLOW_SONG_TEMPO
         elif self.lastState == CLEAR_STATE:
             self.updateState(RECORDING_STATE)
             self.rectime = time()
         elif self.lastState == STOP_STATE:
             self.updateState(PLAYING_STATE)
+
+    def on_quarter_note(self):
+        if self.req_record == 1:
+            thread.start_new_thread(self.record_now, ())
+            self.req_record = 0
+        elif self.req_record == 2:
+            thread.start_new_thread(self.play_now, ())
+            self.req_record = 0
+
+    def record_now(self):
+        self.updateState(RECORDING_STATE)
+
+    def play_now(self):
+        self.updateState(PLAYING_STATE)
 
     def convertToTicks(self, value):
         if value == NONE:

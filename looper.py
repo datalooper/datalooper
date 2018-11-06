@@ -107,6 +107,7 @@ class looper(ControlSurface):
         self.__c_instance.send_midi(midi_event_bytes)
 
     def send_sysex(self, looper, control, data):
+        self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
         looper_status_sysex = (240, looper, control, 3, data, 247)
         self.send_midi(looper_status_sysex)
 
