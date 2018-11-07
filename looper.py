@@ -38,6 +38,9 @@ class looper(ControlSurface):
 
         self.song().add_session_record_status_listener(self.session_status)
 
+        self.send_sysex(0, RESET_COMMAND, 0)
+        self.__track_handler.clear_all(0, 0)
+
     def session_status(self):
         self.log_message(str(self.song().session_record_status))
 
@@ -71,21 +74,9 @@ class looper(ControlSurface):
         self.log_message(m)
 
     def set_bpm(self, bpm):
-        # self.jump_to_downbeat(bpm)
+        self.song().jump_by(1-self.song().current_song_time % 1)
         self.song().tempo = bpm
 
-    # def jump_to_downbeat(self, bpm):
-    #     curTime = self.song().current_song_time
-    #     self.send_message("cur time" + str(curTime))
-    #     min = curTime / 60
-    #     self.send_message("old beats " + str(bpm*min))
-    #     beats = math.ceil(bpm * min)
-    #     if beats % self.song().signature_denominator != 0:
-    #         beats = self.song().signature_denominator - beats % self.song().signature_denominator
-    #     self.send_message("new beats " + str(beats))
-    #     newTime = (beats / bpm) * 60
-    #     self.send_message("new time" + str(newTime))
-    #     self.song().current_song_time = newTime
 
     def on_track_change(self):
         self.scan_tracks()
@@ -95,7 +86,7 @@ class looper(ControlSurface):
         if time.beats != self.cur_beat:
             self.cur_beat = time.beats
             looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0, 247)
-            #self.send_midi(looper_status_sysex)
+            self.send_midi(looper_status_sysex)
 
     def disconnect(self):
         self.log_message("looper disconnecting")
@@ -165,11 +156,17 @@ class looper(ControlSurface):
 
         address_map = {
             (-1, -1, 0, 0, 0): self.__track_handler.record,
-            (-1, -1, 1, 0, 0): self.__track_handler.stop,
+            (-1, -1, 1, 1, 0): self.__track_handler.stop,
             (-1, -1, 2, 0, 0): self.__track_handler.undo,
             (-1, -1, 1, 2, 1): self.__track_handler.clear,
             (-1, 0, 3, 0, 0): self.__track_handler.clear_all,
-            (-1, 0, 3, 2, 2): self.__track_handler.new_session
+            (-1, 2, 3, 0, 0): self.__track_handler.stop_all,
+            (-1, 1, 3, 0, 0): self.__track_handler.mute_all,
+            (-1, 0, 3, 2, 2): self.__track_handler.new_session,
+            (-1, 0, 3, 2, 1): self.__track_handler.exit_new_session,
+            (-1, 0, 3, 2, 5): self.__track_handler.enter_config,
+            (255, 255, 255, 255, 255): self.__track_handler.exit_config
+
         }
 
         needle = ()
@@ -185,3 +182,5 @@ class looper(ControlSurface):
         # Execute the function
         if func is not None:
             print func(instance, looper_num)
+
+

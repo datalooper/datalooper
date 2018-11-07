@@ -45,10 +45,12 @@ class ClTrack(Track):
 
     def stop(self):
         if self.clip != -1:
-            if self.clip.is_playing:
+            if self.clip.is_playing and not self.clip.is_recording:
                 self.__parent.send_message("Stopping Clip")
                 self.clip.stop()
                 self.clipStopping = True
+            elif self.clip.is_recording:
+                self.removeClip()
 
     def removeClip(self):
         self.clipSlot.clip.remove_playing_status_listener(self.onClipStatusChange)
@@ -59,8 +61,7 @@ class ClTrack(Track):
         self.updateTrackStatus(CLEAR_STATE)
 
     def updateTrackStatus(self, status):
-        sysex = (240, 1, 2, 3, CHANGE_STATE_COMMAND, self.trackNum - 1, status, 247)
-        self.__parent.send_midi(sysex)
+        self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, status)
 
     def fireClip(self):
         if self.clipSlot != -1:
@@ -71,11 +72,11 @@ class ClTrack(Track):
     # manages clip listeners and loads the first empty clip slot location into memory
     def getNewClipSlot(self):
         self.__parent.send_message("Getting New Clip")
-
         if self.clipSlot != -1:
             if self.clipSlot.has_clip_has_listener(self.onClipChange):
                 self.clipSlot.remove_has_clip_listener(self.onClipChange)
             self.clipSlot = -1
+
         for clip_slot in self.track.clip_slots:
             if not clip_slot.has_clip:
                 self.clipSlot = clip_slot

@@ -12,12 +12,6 @@ class Track(object):
         self.song = song
         self.req_record = 0
 
-    def _on_looper_param_changed(self):
-        self.update_track_status(self.lastState)
-
-    def update_track_status(self, status):
-        pass
-
     def send_sysex(self, looper, control, data):
         self.__parent.send_sysex(looper, control, data)
 
@@ -26,9 +20,6 @@ class Track(object):
 
     def send_message(self, message):
         self.__parent.send_message(message)
-
-    def update_state(self, state):
-        self.lastState = state
 
     def record(self):
         self.__parent.send_message(
@@ -47,4 +38,7 @@ class Track(object):
             "Looper " + str(self.trackNum) + "clear pressed")
 
     def toggle_mute(self):
+        pass
+
+    def toggle_new_session_mode(self, on):
         pass

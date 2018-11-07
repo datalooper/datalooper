@@ -17,7 +17,7 @@ class ClMidiTrack(cltrack.ClTrack):
     # 3. Clip is already in memory and stopped, meaning clip will play
     # 4. Clip is already in memory and recording, meaning clip will play
     #################
-    def onRecordPressed(self):
+    def record(self):
         self.__parent.send_message("in record pressed")
 
         if self.clipSlot == -1:
@@ -45,16 +45,15 @@ class ClMidiTrack(cltrack.ClTrack):
             # Scenario 3
             self.fireClip()
 
-    def onUndoPressed(self):
+    def undo(self):
         self.undoOverdub()
 
-    def onClearPressed(self):
+    def clear(self):
         self.__parent.send_message("clear pressed")
         if self.clip != -1 and self.clip.is_recording:
             self.removeClip()
             self.__parent.send_message("Clearing Clip")
         else:
-            self.onStopPressed()
             self.getNewClipSlot()
 
     def overdub(self):
