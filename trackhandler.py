@@ -63,17 +63,7 @@ class TrackHandler:
         self.send_message("recording")
         req_track = instance * 3 + looper_num + 1
         for track in self.tracks:
-            self.send_message("tracknum:" + str(track.trackNum) + " tracknum % num_tracks:" + str((track.trackNum - 1 ) % NUM_TRACKS) + " looper num: " + str(looper_num) + " req track: " + str(req_track))
-            if (track.trackNum - 1) % NUM_TRACKS == looper_num and track.trackNum != req_track and isinstance(track, ClTrack) and track.track.arm != track.orig_arm:
-                track.track.arm = track.orig_arm
-                if track.orig_arm is False:
-                    track.updateState(DISARMED_STATE)
-            if isinstance(track, ClTrack) and not track.track.arm and track.trackNum == req_track:
-                track.orig_arm = track.track.arm
-                track.artificial_arm = True
-                track.track.arm = track.artificial_arm
-                track.updateState(track.getClipState())
-            elif track.trackNum == req_track:
+            if track.trackNum == req_track:
                 track.record()
 
     def stop(self, instance, looper_num):
@@ -147,10 +137,15 @@ class TrackHandler:
 
     def change_instance(self, instance, looper_num):
         self.send_message("changing instance to " + str(instance))
-        for track in self.tracks:
-            if instance * 3 <= track.trackNum <= instance * 3 + NUM_TRACKS:
-                self.send_sysex(track.trackNum, CHANGE_STATE_COMMAND, track.lastState)
-        extraTracks = instance * 3 + NUM_TRACKS  - len(self.tracks)
+        for loop_track in self.tracks:
+            if instance * 3 <= loop_track.trackNum - 1 < instance * 3 + NUM_TRACKS:
+                self.send_sysex(loop_track.trackNum, CHANGE_STATE_COMMAND, loop_track.lastState)
+                if isinstance(loop_track, ClTrack):
+                    loop_track.track.current_monitoring_state = 1
+            else:
+                if isinstance(loop_track, ClTrack):
+                    loop_track.track.current_monitoring_state = 2
+        extraTracks = instance * 3 + NUM_TRACKS - len(self.tracks)
         i = 0
         while i < extraTracks:
             self.send_sysex(instance * 3 + NUM_TRACKS - i, CHANGE_STATE_COMMAND, CLEAR_STATE)

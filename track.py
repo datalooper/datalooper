@@ -15,14 +15,6 @@ class Track(object):
         self.new_session_mode = False
         self.lastState = CLEAR_STATE
 
-
-    def set_arm(self):
-        if self.track.arm != self.artificial_arm:
-            self.orig_arm = self.track.arm
-            return True
-        else:
-            return False
-
     def new_clip(self):
         pass
 

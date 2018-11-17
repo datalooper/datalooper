@@ -25,19 +25,19 @@ class ClMidiTrack(cltrack.ClTrack):
             self.getNewClipSlot()
             self.fireClip()
         elif self.clipSlot.has_clip:
-            if self.clip.is_playing and not self.clip.is_recording:
+            if self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording:
                 self.__parent.send_message("going to overdub")
                 self.overdub()
                 # Scenario 2
-            elif not self.clip.is_playing and not self.clip.is_recording:
+            elif not self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording:
                 self.__parent.send_message("playing clip from stopped state")
                 # Scenario 3
                 self.fireClip()
-            elif self.clip.is_recording and not self.clip.is_overdubbing:
+            elif self.clipSlot.clip.is_recording and not self.clipSlot.clip.is_overdubbing:
                 # Scenario 4
                 self.__parent.send_message("ending recording")
                 self.fireClip()
-            elif self.clip.is_overdubbing:
+            elif self.clipSlot.clip.is_overdubbing:
                 self.endOverdub()
         elif self.clipSlot != -1 and not self.clipSlot.has_clip:
             self.__parent.send_message("recording new clip")
@@ -58,15 +58,15 @@ class ClMidiTrack(cltrack.ClTrack):
         self.updateState(OVERDUB_STATE)
         self.__parent.session_record(True, self.track)
         if self.clip != -1:
-            self.clip.select_all_notes()
-            self.prevNotes.append(self.clip.get_selected_notes())
+            self.clipSlot.clip.select_all_notes()
+            self.prevNotes.append(self.clipSlot.clip.get_selected_notes())
         self.song.session_record = 1
 
     def undoOverdub(self):
         if len(self.prevNotes) > 0:
             self.__parent.send_message("removing overdub")
-            self.clip.select_all_notes()
-            self.clip.replace_selected_notes(self.prevNotes[-1])
+            self.clipSlot.clip.select_all_notes()
+            self.clipSlot.clip.replace_selected_notes(self.prevNotes[-1])
             del self.prevNotes[-1]
 
     def endOverdub(self):
@@ -77,7 +77,7 @@ class ClMidiTrack(cltrack.ClTrack):
 
     def new_clip(self):
         if self.clip != -1:
-            self.clip.stop()
+            self.clipSlot.clip.stop()
         self.getNewClipSlot()
 
 
