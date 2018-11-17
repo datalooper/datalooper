@@ -11,17 +11,21 @@ class Track(object):
         self.lastState = CLEAR_STATE
         self.song = song
         self.req_record = 0
-        self.track_arm = self.track.arm
-        #self.track.add_arm_listener(self.set_arm)
+        self.track.add_arm_listener(self.set_arm)
+        self.artificial_arm = False
+        self.orig_arm = self.track.arm
 
     def set_arm(self):
-        self.track_arm = self.track.arm
+        if self.track.arm != self.artificial_arm:
+            self.orig_arm = self.track.arm
 
     def reset_arm(self):
-        self.track.arm = self.track_arm
+        self.send_message("track num: " + str(self.trackNum) + " track arm: " + str(self.orig_arm))
+        self.track.arm = self.orig_arm
 
     def arm_track(self):
-        self.track_arm = self.track.arm
+        self.orig_arm = self.track.arm
+        self.send_message("setting arm: " + str(self.track.arm))
         self.track.arm = 1
 
     def send_sysex(self, looper, control, data):
@@ -32,10 +36,6 @@ class Track(object):
 
     def send_message(self, message):
         self.__parent.send_message(message)
-
-    def record(self):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + "record pressed")
 
     def stop(self):
         self.__parent.send_message(

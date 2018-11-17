@@ -98,7 +98,7 @@ class looper(ControlSurface):
         self.__c_instance.send_midi(midi_event_bytes)
 
     def send_sysex(self, looper, control, data):
-        self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
+        #self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
         looper_status_sysex = (240, looper, control, 3, data, 247)
         self.send_midi(looper_status_sysex)
 
@@ -126,7 +126,7 @@ class looper(ControlSurface):
 		never get any MIDI messages at all.
 		"""
         script_handle = self.__c_instance.handle()
-        self.log_message("building map")
+        #self.log_message("building map")
         for i in range(128):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)

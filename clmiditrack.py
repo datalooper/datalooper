@@ -19,10 +19,7 @@ class ClMidiTrack(cltrack.ClTrack):
     #################
     def record(self):
         self.__parent.send_message("in record pressed")
-        if not self.track.arm:
-            self.arm_track()
-            return
-        elif self.clipSlot == -1:
+        if self.clipSlot == -1:
             self.__parent.send_message("starting recording in new slot")
             # Scenario # 1
             self.arm_track()

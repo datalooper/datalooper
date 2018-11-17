@@ -52,7 +52,6 @@ class ClTrack(Track):
                 self.clipStopping = True
             elif self.clip.is_recording:
                 self.removeClip()
-            
 
     def removeClip(self):
         self.clipSlot.clip.remove_playing_status_listener(self.onClipStatusChange)

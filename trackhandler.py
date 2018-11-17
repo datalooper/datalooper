@@ -3,6 +3,7 @@ from _Generic.Devices import *
 from claudiotrack import ClAudioTrack
 from clmiditrack import ClMidiTrack
 from consts import *
+from datalooper.cltrack import ClTrack
 from dltrack import DlTrack
 
 
@@ -53,15 +54,27 @@ class TrackHandler:
         req_track = instance * 3 + looper_num + 1
         tracks = []
         for track in self.tracks:
-            self.send_message(str(req_track) + " :" + str(track.trackNum))
             if track.trackNum == req_track:
                 tracks.append(track)
         return tracks
 
     def record(self, instance, looper_num):
         self.send_message("recording")
-        for track in self.get_track(instance, looper_num):
-            track.record()
+        req_track = instance * 3 + looper_num + 1
+        for track in self.tracks:
+            self.send_message("tracknum:" + str(track.trackNum) + " tracknum % num_tracks:" + str((track.trackNum - 1 ) % NUM_TRACKS) + " looper num: " + str(looper_num) + " req track: " + str(req_track))
+            if (track.trackNum - 1) % NUM_TRACKS == looper_num and track.trackNum != req_track and isinstance(track, ClTrack) and track.track.arm != track.orig_arm:
+                track.track.arm = track.orig_arm
+            if isinstance(track, ClTrack) and not track.track.arm and track.trackNum == req_track:
+                track.orig_arm = track.track.arm
+                track.artificial_arm = True
+                track.track.arm = track.artificial_arm
+            elif track.trackNum == req_track:
+                track.record()
+
+
+
+
 
     def stop(self, instance, looper_num):
         self.send_message("stop")
@@ -137,6 +150,14 @@ class TrackHandler:
         for track in self.tracks:
             if instance * 3 <= track.trackNum <= instance * 3 + NUM_TRACKS:
                 self.send_sysex(track.trackNum, CHANGE_STATE_COMMAND, track.lastState)
+
+    def check_track_arm(self, trackNum):
+        for track in self.tracks:
+            self.send_message("trackNum: " + str(trackNum))
+            if track.trackNum % NUM_TRACKS == trackNum % NUM_TRACKS and track.trackNum != trackNum:
+                track.reset_arm()
+            elif track.trackNum == trackNum:
+                track.arm_track()
 
     def bank(self, instance, looper_num):
         self.__parent.send_program_change(looper_num )
