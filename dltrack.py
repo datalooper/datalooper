@@ -61,6 +61,11 @@ class DlTrack(Track):
                 self.state.add_value_listener(self._on_looper_param_changed)
             self.request_control(RECORD_CONTROL)
 
+    def play(self):
+        if self.lastState == STOP_STATE:
+            self.request_control(RECORD_CONTROL)
+            self.updateState(PLAYING_STATE)
+
     def stop(self):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")

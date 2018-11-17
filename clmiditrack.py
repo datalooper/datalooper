@@ -57,7 +57,7 @@ class ClMidiTrack(cltrack.ClTrack):
         self.__parent.send_message("overdubbing")
         self.updateState(OVERDUB_STATE)
         self.__parent.session_record(True, self.track)
-        if self.clip != -1:
+        if self.clipSlot.has_clip != -1:
             self.clipSlot.clip.select_all_notes()
             self.prevNotes.append(self.clipSlot.clip.get_selected_notes())
         self.song.session_record = 1

@@ -17,6 +17,7 @@ class TrackHandler:
         self.new_session_mode = False
         self.metro = self.song.metronome
         self.trackStore = []
+        self.stopAll = False
 
     def disconnect(self):
         self.__parent.disconnect()
@@ -89,9 +90,14 @@ class TrackHandler:
 
     def toggle_start_stop_all(self, instance, looper_num):
         if not self.new_session_mode:
-            for track in self.tracks:
-                track.toggle_playback()
-            self.send_message("stop all")
+            self.stopAll = not self.stopAll
+            if self.stopAll:
+                for track in self.tracks:
+                    track.stop()
+                self.send_message("stop all")
+            else:
+                for track in self.tracks:
+                    track.play()
 
     def mute_all(self, instance, looper_num):
         for track in self.tracks:
