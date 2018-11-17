@@ -52,7 +52,7 @@ class TrackHandler:
         self.__parent.send_message(message)
 
     def get_track(self, instance, looper_num):
-        req_track = instance * 3 + looper_num + 1
+        req_track = instance * 3 + looper_num
         tracks = []
         for track in self.tracks:
             if track.trackNum == req_track:
@@ -61,7 +61,7 @@ class TrackHandler:
 
     def record(self, instance, looper_num):
         self.send_message("recording")
-        req_track = instance * 3 + looper_num + 1
+        req_track = instance * 3 + looper_num
         for track in self.tracks:
             if track.trackNum == req_track:
                 track.record()
@@ -87,10 +87,10 @@ class TrackHandler:
                 track.clear()
         self.send_message("clear all")
 
-    def stop_all(self, instance, looper_num):
+    def toggle_start_stop_all(self, instance, looper_num):
         if not self.new_session_mode:
             for track in self.tracks:
-                track.stop()
+                track.toggle_playback()
             self.send_message("stop all")
 
     def mute_all(self, instance, looper_num):
@@ -137,22 +137,21 @@ class TrackHandler:
 
     def change_instance(self, instance, looper_num):
         self.send_message("changing instance to " + str(instance))
+        i = 0
+        while i < NUM_TRACKS:
+            self.send_sysex(instance * NUM_TRACKS + i, CHANGE_STATE_COMMAND, CLEAR_STATE)
+            i += 1
         for loop_track in self.tracks:
-            if instance * 3 <= loop_track.trackNum - 1 < instance * 3 + NUM_TRACKS:
+            if instance * 3 <= loop_track.trackNum < instance * 3 + NUM_TRACKS:
                 self.send_sysex(loop_track.trackNum, CHANGE_STATE_COMMAND, loop_track.lastState)
                 if isinstance(loop_track, ClTrack):
                     loop_track.track.current_monitoring_state = 1
             else:
                 if isinstance(loop_track, ClTrack):
                     loop_track.track.current_monitoring_state = 2
-        extraTracks = instance * 3 + NUM_TRACKS - len(self.tracks)
-        i = 0
-        while i < extraTracks:
-            self.send_sysex(instance * 3 + NUM_TRACKS - i, CHANGE_STATE_COMMAND, CLEAR_STATE)
-            i += 1
 
     def bank(self, instance, looper_num):
-        self.__parent.send_program_change(looper_num )
+        self.__parent.send_program_change(looper_num)
 
     def new_clip(self, instance, looper_num):
         for track in self.get_track(instance, looper_num):

@@ -24,6 +24,9 @@ class Track(object):
     def clearListener(self):
         pass
 
+    def toggle_playback(self):
+        pass
+
     def send_message(self, message):
         self.__parent.send_message(message)
 

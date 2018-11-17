@@ -73,6 +73,12 @@ class DlTrack(Track):
         # todo clean this up, follow tempo
         #self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
 
+    def toggle_playback(self):
+        if self.lastState == STOP_STATE:
+            self.request_control(RECORD_CONTROL)
+        elif self.lastState == PLAYING_STATE:
+            self.request_control(STOP_CONTROL)
+
     def undo(self):
         self.request_control(UNDO_CONTROL)
         self.__parent.send_message(

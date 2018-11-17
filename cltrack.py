@@ -18,6 +18,7 @@ class ClTrack(Track):
             track.add_fired_slot_index_listener(self.on_slot_fired)
 
         self.lastState = self.check_clip_slot_state()
+
         self.updateState(self.lastState)
 
     def set_arm(self):
@@ -27,8 +28,8 @@ class ClTrack(Track):
             self.updateState(DISARMED_STATE)
 
     def on_slot_fired(self):
-        self.__parent.send_message(
-            "fired on track : " + str(self.trackNum) + " slot #" + str(self.track.fired_slot_index))
+        # self.__parent.send_message(
+        #     "fired on track : " + str(self.trackNum) + " slot #" + str(self.track.fired_slot_index))
         if self.track.fired_slot_index >= 0:
             self.clipSlot = self.track.clip_slots[self.track.fired_slot_index]
             self.add_listeners()
@@ -36,7 +37,7 @@ class ClTrack(Track):
     def add_listeners(self):
         if not self.clipSlot.has_clip_has_listener(self.onClipChange):
             self.clipSlot.add_has_clip_listener(self.onClipChange)
-        if not self.clipSlot.clip.playing_status_has_listener(self.onClipStatusChange):
+        if self.clipSlot.has_clip and not self.clipSlot.clip.playing_status_has_listener(self.onClipStatusChange):
             self.clipSlot.clip.add_playing_status_listener(self.onClipStatusChange)
 
     def stop(self):
@@ -47,6 +48,17 @@ class ClTrack(Track):
                 self.clipStopping = True
             elif self.clipSlot.clip.is_recording:
                 self.removeClip()
+        elif self.track.playing_slot_index > 0:
+            self.track.clip_slots[self.track.playing_slot_index].stop()
+
+    def toggle_playback(self):
+        if self.clipSlot != -1 and self.clipSlot.has_clip:
+            if self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording:
+                self.__parent.send_message("Stopping Clip")
+                self.clipStopping = True
+                self.clipSlot.clip.stop()
+            elif not self.clipSlot.clip.is_playing:
+                self.clipSlot.clip.fire()
 
     def removeClip(self):
         self.clipSlot.clip.remove_playing_status_listener(self.onClipStatusChange)
@@ -56,11 +68,14 @@ class ClTrack(Track):
         self.updateState(CLEAR_STATE)
 
     def check_clip_slot_state(self):
+        self.__parent.send_message("Track: " + str(self.trackNum) + " Clip slot: " + str(self.clipSlot) + " Playing Slot Index: " + str(self.track.playing_slot_index) + " Firing Slot: " + str(self.track.fired_slot_index) )
         if self.clipSlot == -1 and self.track.playing_slot_index < 0:
             return CLEAR_STATE
-        elif self.clipSlot == -1:
+        elif self.clipSlot == -1 and self.track.playing_slot_index >= 0:
             self.clipSlot = self.track.clip_slots[self.track.playing_slot_index]
             self.add_listeners()
+        elif self.clipSlot == -1 and self.track.fired_slot_index >= 0:
+            self.clipSlot = self.track.clip_slots[self.track.fired_slot_index]
         return self.check_clip_state()
 
     def check_clip_state(self):
@@ -113,23 +128,30 @@ class ClTrack(Track):
                 self.updateState(RECORDING_STATE)
             if not self.clipSlot.clip.playing_status_has_listener(self.onClipStatusChange):
                 self.clipSlot.clip.add_playing_status_listener(self.onClipStatusChange)
-        elif not self.clipSlot.has_clip:
-            self.__parent.send_message("Clear State")
+        else:
             self.updateState(CLEAR_STATE)
             self.checkActiveClip()
 
     def onClipStatusChange(self):
-        if self.clipSlot.is_playing:
-            self.updateState(PLAYING_STATE)
-        elif not self.clipSlot.is_playing and not self.clipSlot.is_recording:
-            if self.clipSlot.has_clip and self.clipStopping:
-                self.updateState(STOP_STATE)
-                self.clipStopping = False
-            else:
-                self.updateState(CLEAR_STATE)
-                self.getNewClipSlot()
+        self.__parent.send_message("On Clip Status Change State")
+
+        if self.track.playing_slot_index > 0 and self.track.clip_slots[self.track.playing_slot_index] == self.clipSlot:
+            if self.clipSlot.is_playing:
+                self.updateState(PLAYING_STATE)
+            elif not self.clipSlot.is_playing and not self.clipSlot.is_recording and not self.clipSlot.is_triggered:
+                if self.clipSlot.has_clip and self.clipStopping:
+                    self.updateState(STOP_STATE)
+                    self.clipStopping = False
+                else:
+                    self.updateState(CLEAR_STATE)
+                    self.getNewClipSlot()
+        elif self.track.playing_slot_index > 0:
+            self.clipSlot = self.track.clip_slots[self.track.playing_slot_index]
+            self.updateState(self.check_clip_state())
+            self.add_listeners()
 
     def updateState(self, state):
+        self.__parent.send_message("updating state: " + str(state) + " Tracknum: " + str(self.trackNum))
         if self.track.can_be_armed and not self.track.arm:
             super(ClTrack, self).updateState(DISARMED_STATE)
         else:

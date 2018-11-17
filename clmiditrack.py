@@ -76,8 +76,6 @@ class ClMidiTrack(cltrack.ClTrack):
         self.__parent.session_record(False, self.track)
 
     def new_clip(self):
-        if self.clip != -1:
-            self.clipSlot.clip.stop()
         self.getNewClipSlot()
 
 

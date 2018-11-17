@@ -37,7 +37,6 @@ class looper(ControlSurface):
         self.live = Live.Application.get_application()
 
         self.song().add_session_record_status_listener(self.session_status)
-        #self.song().stop_all_clips()
 
     def refresh_state(self):
         self.log_message("refreshing state")
@@ -63,9 +62,11 @@ class looper(ControlSurface):
                 if string_pos != -1:
                     # Checks for double digits
                     if len(track.name) >= string_pos + 5 and track.name[string_pos + 4: string_pos + 5].isdigit():
-                        track_num = int(track.name[string_pos + 3: string_pos + 5])
+                        # 0 indexed
+                        track_num = int(track.name[string_pos + 3: string_pos + 5]) - 1
                     else:
-                        track_num = int(track.name[string_pos + 3: string_pos + 4])
+                        # 0 indexed
+                        track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
                     self.__track_handler.append_tracks(track, track_num, key)
                 # adds name change listener to all tracks
                 if not track.name_has_listener(self.scan_tracks):
@@ -165,9 +166,10 @@ class looper(ControlSurface):
             (-1, -1, 2, 1, 0): self.__track_handler.undo,
             (-1, -1, 2, 2, 1): self.__track_handler.bank,
             (-1, -1, 1, 2, 1): self.__track_handler.clear,
-            (-1, 0, 3, 0, 0): self.__track_handler.clear_all,
-            (-1, 2, 3, 0, 0): self.__track_handler.stop_all,
+            (-1, 0, 3, 1, 0): self.__track_handler.clear_all,
+            (-1, 2, 3, 1, 0): self.__track_handler.toggle_start_stop_all,
             (-1, 1, 3, 0, 0): self.__track_handler.mute_all,
+            (-1, 1, 3, 1, -1): self.__track_handler.mute_all,
             (-1, 0, 3, 2, 2): self.__track_handler.new_session,
             (-1, 0, 3, 2, 1): self.__track_handler.exit_new_session,
             (-1, 0, 3, 2, 5): self.__track_handler.enter_config,
