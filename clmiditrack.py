@@ -19,10 +19,13 @@ class ClMidiTrack(cltrack.ClTrack):
     #################
     def record(self):
         self.__parent.send_message("in record pressed")
-
-        if self.clipSlot == -1:
+        if not self.track.arm:
+            self.arm_track()
+            return
+        elif self.clipSlot == -1:
             self.__parent.send_message("starting recording in new slot")
             # Scenario # 1
+            self.arm_track()
             self.getNewClipSlot()
             self.fireClip()
         elif self.clipSlot.has_clip:
@@ -42,7 +45,7 @@ class ClMidiTrack(cltrack.ClTrack):
                 self.endOverdub()
         elif self.clipSlot != -1 and not self.clipSlot.has_clip:
             self.__parent.send_message("recording new clip")
-            # Scenario 3
+            # Scenario 5
             self.fireClip()
 
     def undo(self):
@@ -50,11 +53,9 @@ class ClMidiTrack(cltrack.ClTrack):
 
     def clear(self):
         self.__parent.send_message("clear pressed")
-        if self.clip != -1 and self.clip.is_recording:
-            self.removeClip()
-            self.__parent.send_message("Clearing Clip")
-        else:
-            self.getNewClipSlot()
+        self.removeClip()
+        self.reset_arm()
+        self.__parent.send_message("Clearing Clip")
 
     def overdub(self):
         self.__parent.send_message("overdubbing")

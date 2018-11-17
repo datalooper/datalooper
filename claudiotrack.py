@@ -29,5 +29,4 @@ class ClAudioTrack(cltrack.ClTrack):
             self.clipSlot.delete_clip()
 
     def undo(self):
-        self.onStopPressed()
         self.getNewClipSlot()

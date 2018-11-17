@@ -16,6 +16,7 @@ class ClTrack(Track):
         if not track.fired_slot_index_has_listener(self.on_slot_fired):
             track.add_fired_slot_index_listener(self.on_slot_fired)
 
+
     # The fired slot index is kind of useless, as Ableton only sends out -1 if the slot plays from a stopped transport or if the slot plays immediately, so we scan
     # all the slots. Not the most efficient, sorry.
 
@@ -51,6 +52,7 @@ class ClTrack(Track):
                 self.clipStopping = True
             elif self.clip.is_recording:
                 self.removeClip()
+            
 
     def removeClip(self):
         self.clipSlot.clip.remove_playing_status_listener(self.onClipStatusChange)

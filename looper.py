@@ -38,8 +38,8 @@ class looper(ControlSurface):
 
         self.song().add_session_record_status_listener(self.session_status)
 
-        self.send_sysex(0, RESET_COMMAND, 0)
-        self.__track_handler.clear_all(0, 0)
+    def refresh_state(self):
+        self.log_message("refreshing state")
 
     def session_status(self):
         self.log_message(str(self.song().session_record_status))
@@ -102,6 +102,11 @@ class looper(ControlSurface):
         looper_status_sysex = (240, looper, control, 3, data, 247)
         self.send_midi(looper_status_sysex)
 
+    def send_program_change(self, program):
+        self.send_message("sending program change:" + str(program))
+        looper_status_sysex = (192, program)
+        self.send_midi(looper_status_sysex)
+
     def receive_midi(self, midi_bytes):
         """MIDI messages are only received through this function, when explicitly
         forwarded in 'build_midi_map'.
@@ -125,6 +130,8 @@ class looper(ControlSurface):
         for i in range(128):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
+        #self.__track_handler.clear_all(0, 0)
+        #self.send_sysex(0, RESET_COMMAND, 0)
 
     def receive_midi_notes(self, midi_bytes):
         note_num = midi_bytes[1]
@@ -158,6 +165,7 @@ class looper(ControlSurface):
             (-1, -1, 0, 0, 0): self.__track_handler.record,
             (-1, -1, 1, 1, 0): self.__track_handler.stop,
             (-1, -1, 2, 0, 0): self.__track_handler.undo,
+            (-1, -1, 2, 2, 1): self.__track_handler.bank,
             (-1, -1, 1, 2, 1): self.__track_handler.clear,
             (-1, 0, 3, 0, 0): self.__track_handler.clear_all,
             (-1, 2, 3, 0, 0): self.__track_handler.stop_all,
@@ -165,6 +173,7 @@ class looper(ControlSurface):
             (-1, 0, 3, 2, 2): self.__track_handler.new_session,
             (-1, 0, 3, 2, 1): self.__track_handler.exit_new_session,
             (-1, 0, 3, 2, 5): self.__track_handler.enter_config,
+            (-1, -1, -1, 3, -1): self.__track_handler.change_instance,
             (255, 255, 255, 255, 255): self.__track_handler.exit_config
 
         }
