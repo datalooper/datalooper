@@ -37,6 +37,7 @@ class looper(ControlSurface):
         self.live = Live.Application.get_application()
 
         self.song().add_session_record_status_listener(self.session_status)
+        #self.song().stop_all_clips()
 
     def refresh_state(self):
         self.log_message("refreshing state")
@@ -76,7 +77,6 @@ class looper(ControlSurface):
     def set_bpm(self, bpm):
         self.song().jump_by(1-self.song().current_song_time % 1)
         self.song().tempo = bpm
-
 
     def on_track_change(self):
         self.scan_tracks()
@@ -130,8 +130,7 @@ class looper(ControlSurface):
         for i in range(128):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
-        #self.__track_handler.clear_all(0, 0)
-        #self.send_sysex(0, RESET_COMMAND, 0)
+
 
     def receive_midi_notes(self, midi_bytes):
         note_num = midi_bytes[1]
@@ -155,16 +154,15 @@ class looper(ControlSurface):
         looper_num = midi_bytes[3]
         control_num = midi_bytes[4]
         action = midi_bytes[6]
-        if action == 2:
-            long_press_seconds = midi_bytes[7]
-        else:
-            long_press_seconds = 0
+        long_press_seconds = midi_bytes[7]
+
         data = [instance, looper_num, control_num, action, long_press_seconds]
 
         address_map = {
-            (-1, -1, 0, 0, 0): self.__track_handler.record,
+            (-1, -1, 0, 1, 0): self.__track_handler.record,
+            (-1, -1, 0, 2, 1): self.__track_handler.new_clip,
             (-1, -1, 1, 1, 0): self.__track_handler.stop,
-            (-1, -1, 2, 0, 0): self.__track_handler.undo,
+            (-1, -1, 2, 1, 0): self.__track_handler.undo,
             (-1, -1, 2, 2, 1): self.__track_handler.bank,
             (-1, -1, 1, 2, 1): self.__track_handler.clear,
             (-1, 0, 3, 0, 0): self.__track_handler.clear_all,

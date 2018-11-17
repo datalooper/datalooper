@@ -11,7 +11,6 @@ class DlTrack(Track):
         self.tempo_control = -1
         self.device = device
         self.state = device.parameters[STATE]
-        self.lastState = CLEAR_STATE
         self.rectime = 0
         self.ignore_stop = False
         self.req_record = True
@@ -20,7 +19,16 @@ class DlTrack(Track):
         self.quantizeTicks = -1
         self.quantization = -1
         self._notification_timer = -1
-        self.new_session_mode = False
+        self.lastState = CLEAR_STATE
+        self.updateState(self.lastState)
+        self.track.add_arm_listener(self.set_arm)
+
+    def set_arm(self):
+        if super(DlTrack, self).set_arm():
+            if self.track.arm:
+                self.updateState(CLEAR_STATE)
+            else:
+                self.updateState(DISARMED_STATE)
 
     def _on_looper_param_changed(self):
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
@@ -32,15 +40,6 @@ class DlTrack(Track):
     def send_message(self, message):
         self.__parent.send_message(message)
 
-    def updateState(self, state):
-        if self.new_session_mode:
-            if state == CLEAR_STATE:
-                self.state.value = STOP_STATE
-            else:
-                self.state.value = state
-        self.lastState = state
-        self.send_message("updating LED " + str(self.lastState))
-        self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
 
     def request_control(self, control):
         self.send_message("Requesting control: " + str(control))

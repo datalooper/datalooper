@@ -22,7 +22,6 @@ class ClMidiTrack(cltrack.ClTrack):
         if self.clipSlot == -1:
             self.__parent.send_message("starting recording in new slot")
             # Scenario # 1
-            self.arm_track()
             self.getNewClipSlot()
             self.fireClip()
         elif self.clipSlot.has_clip:
@@ -50,23 +49,14 @@ class ClMidiTrack(cltrack.ClTrack):
 
     def clear(self):
         self.__parent.send_message("clear pressed")
-        self.removeClip()
-        self.reset_arm()
+        if self.clipSlot != -1 and self.clipSlot.has_clip:
+            self.removeClip()
         self.__parent.send_message("Clearing Clip")
 
     def overdub(self):
         self.__parent.send_message("overdubbing")
-        self.updateTrackStatus(OVERDUB_STATE)
-        self.trackStore = []
-        for track in self.song.tracks:
-            if track.name != self.track.name and track.can_be_armed:
-                self.trackStore.append(TempTrack(track.name, track.arm, track.current_monitoring_state))
-                self.__parent.send_message(track.name + " " + str(track.current_monitoring_state))
-                if track.arm == 1:
-                    track.arm = 0
-                    if track.current_monitoring_state == 1:
-                        # TODO also need to check if clip is playing
-                        track.current_monitoring_state = 0
+        self.updateState(OVERDUB_STATE)
+        self.__parent.session_record(True, self.track)
         if self.clip != -1:
             self.clip.select_all_notes()
             self.prevNotes.append(self.clip.get_selected_notes())
@@ -82,18 +72,12 @@ class ClMidiTrack(cltrack.ClTrack):
     def endOverdub(self):
         self.__parent.send_message("ending overdubbing")
         self.song.session_record = 0
-        self.updateTrackStatus(PLAYING_STATE)
-        for track in self.song.tracks:
-            if track.name != self.track.name:
-                match = next((trackS for trackS in self.trackStore if track.name == trackS.name), None)
-                if match is not None:
-                    track.current_monitoring_state = match.current_monitoring_state
-                if track.can_be_armed:
-                    track.arm = match.arm
+        self.updateState(PLAYING_STATE)
+        self.__parent.session_record(False, self.track)
+
+    def new_clip(self):
+        if self.clip != -1:
+            self.clip.stop()
+        self.getNewClipSlot()
 
 
-class TempTrack(object):
-    def __init__(self, name, arm, current_monitoring_state):
-        self.name = name
-        self.arm = arm
-        self.current_monitoring_state = current_monitoring_state

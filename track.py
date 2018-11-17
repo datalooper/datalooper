@@ -8,25 +8,23 @@ class Track(object):
         self.__parent = parent
         self.track = track
         self.trackNum = trackNum
-        self.lastState = CLEAR_STATE
         self.song = song
         self.req_record = 0
-        self.track.add_arm_listener(self.set_arm)
-        self.artificial_arm = False
+        self.artificial_arm = -1
         self.orig_arm = self.track.arm
+        self.new_session_mode = False
+        self.lastState = CLEAR_STATE
+
 
     def set_arm(self):
         if self.track.arm != self.artificial_arm:
             self.orig_arm = self.track.arm
+            return True
+        else:
+            return False
 
-    def reset_arm(self):
-        self.send_message("track num: " + str(self.trackNum) + " track arm: " + str(self.orig_arm))
-        self.track.arm = self.orig_arm
-
-    def arm_track(self):
-        self.orig_arm = self.track.arm
-        self.send_message("setting arm: " + str(self.track.arm))
-        self.track.arm = 1
+    def new_clip(self):
+        pass
 
     def send_sysex(self, looper, control, data):
         self.__parent.send_sysex(looper, control, data)
@@ -54,3 +52,12 @@ class Track(object):
 
     def toggle_new_session_mode(self, on):
         pass
+
+    def updateState(self, state):
+        if self.new_session_mode:
+            if state == CLEAR_STATE:
+                self.state.value = STOP_STATE
+            else:
+                self.state.value = state
+        self.lastState = state
+        self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
