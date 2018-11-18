@@ -83,7 +83,7 @@ class ClTrack(Track):
             self.add_listeners()
         elif self.clipSlot == -1 and self.track.fired_slot_index >= 0:
             self.clipSlot = self.track.clip_slots[self.track.fired_slot_index]
-        return self.check_clip_state()
+        return self.check_clip_state(self.clipSlot)
 
     def check_clip_state(self, clip_slot):
         if clip_slot.has_clip and clip_slot != -1:
