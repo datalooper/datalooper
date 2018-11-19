@@ -54,10 +54,12 @@ class DlTrack(Track):
             if self.lastState == RECORDING_STATE:
                 self.calculateBPM(time() - self.rectime)
                 self.updateState(PLAYING_STATE)
+                self.state.value = PLAYING_STATE
                 self.__parent.new_session(0,0)
             elif self.lastState == CLEAR_STATE:
                 self.updateState(RECORDING_STATE)
                 self.rectime = time()
+                self.state.value = RECORDING_STATE
         else:
             self.request_control(RECORD_CONTROL)
 
@@ -117,11 +119,11 @@ class DlTrack(Track):
 
     def toggle_new_session_mode(self, new_session_mode):
         self.new_session_mode = new_session_mode
-        if new_session_mode:
-            self.quantization = self.device.parameters[QUANTIZATION].value
-            self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
-            self.device.parameters[QUANTIZATION].value = NO_QUANTIZATION
-            self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
-        else:
-            self.device.parameters[QUANTIZATION].value = self.quantization
-            self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
+        # if new_session_mode:
+        #     self.quantization = self.device.parameters[QUANTIZATION].value
+        #     self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
+        #     self.device.parameters[QUANTIZATION].value = NO_QUANTIZATION
+        #     self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
+        # else:
+        #     self.device.parameters[QUANTIZATION].value = self.quantization
+        #     self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
