@@ -17,7 +17,6 @@ class TrackHandler:
         self.new_session_mode = False
         self.metro = self.song.metronome
         self.trackStore = []
-        self.stopAll = False
 
     def disconnect(self):
         self.__parent.disconnect()
@@ -63,6 +62,7 @@ class TrackHandler:
     def record(self, instance, looper_num):
         self.send_message("recording")
         req_track = instance * 3 + looper_num
+        self.stopAll = True
         for track in self.tracks:
             if track.trackNum == req_track:
                 track.record()
@@ -70,7 +70,7 @@ class TrackHandler:
     def stop(self, instance, looper_num):
         self.send_message("stop")
         for track in self.get_track(instance, looper_num):
-            track.stop()
+            track.stop(True)
 
     def undo(self, instance, looper_num):
         for track in self.get_track(instance, looper_num):
@@ -89,15 +89,21 @@ class TrackHandler:
         self.send_message("clear all")
 
     def toggle_start_stop_all(self, instance, looper_num):
+        self.send_message(self.check_uniform_state(STOP_STATE))
         if not self.new_session_mode:
-            self.stopAll = not self.stopAll
-            if self.stopAll:
+            if self.check_uniform_state(STOP_STATE):
+                self.jump_to_next_bar(instance, looper_num)
                 for track in self.tracks:
-                    track.stop()
-                self.send_message("stop all")
+                    track.play(False)
             else:
                 for track in self.tracks:
-                    track.play()
+                    track.stop(False)
+
+    def check_uniform_state(self, state):
+        for track in self.tracks:
+            if track.state.value != state:
+                return False
+        return True
 
     def mute_all(self, instance, looper_num):
         for track in self.tracks:
@@ -137,6 +143,13 @@ class TrackHandler:
     def enter_config(self, instance, looper_num):
         self.send_message("Config toggled")
         self.send_sysex(0, 5, 0)
+
+    def jump_to_next_bar(self, instance, looper_num):
+        rec_flag = self.song.record_mode
+        time = int(self.song.current_song_time) + (self.song.signature_denominator - (int(self.song.current_song_time) % self.song.signature_denominator ))
+        self.send_message("current time:" + str(self.song.current_song_time) + "time: " + str(time))
+        self.song.current_song_time = time
+        self.song.record_mode = rec_flag
 
     def exit_config(self, instance, looper_num):
         self.exit_new_session(instance, looper_num)

@@ -44,7 +44,7 @@ class ClTrack(Track):
         if clip_slot.has_clip and not clip_slot.clip.playing_status_has_listener(self.on_clip_status_change):
             clip_slot.clip.add_playing_status_listener(self.on_clip_status_change)
 
-    def stop(self):
+    def stop(self, quantized):
         if self.track.playing_slot_index >= 0:
             clip_slot = self.track.clip_slots[self.track.playing_slot_index]
             if clip_slot.clip.is_recording:
@@ -63,7 +63,7 @@ class ClTrack(Track):
             elif not self.clipSlot.clip.is_playing:
                 self.clipSlot.clip.fire()
 
-    def play(self):
+    def play(self, quantized):
         if self.clipSlot != -1 and self.clipSlot.has_clip and not self.clipSlot.clip.is_playing:
             self.clipSlot.clip.fire()
 

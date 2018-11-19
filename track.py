@@ -30,7 +30,7 @@ class Track(object):
     def send_message(self, message):
         self.__parent.send_message(message)
 
-    def stop(self):
+    def stop(self, quantized):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + "stop pressed")
 

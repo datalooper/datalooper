@@ -22,6 +22,8 @@ class DlTrack(Track):
         self.lastState = CLEAR_STATE
         self.updateState(self.lastState)
         self.track.add_arm_listener(self.set_arm)
+        if not self.state.value_has_listener(self._on_looper_param_changed):
+            self.state.add_value_listener(self._on_looper_param_changed)
 
     def set_arm(self):
         if super(DlTrack, self).set_arm():
@@ -57,16 +59,18 @@ class DlTrack(Track):
                 self.updateState(RECORDING_STATE)
                 self.rectime = time()
         else:
-            if not self.state.value_has_listener(self._on_looper_param_changed):
-                self.state.add_value_listener(self._on_looper_param_changed)
             self.request_control(RECORD_CONTROL)
 
-    def play(self):
+    def play(self, quantized):
         if self.lastState == STOP_STATE:
-            self.request_control(RECORD_CONTROL)
+            self.send_message("attempting play")
+            if quantized:
+                self.request_control(RECORD_CONTROL)
+            else:
+                self.state.value = PLAYING_STATE
             self.updateState(PLAYING_STATE)
 
-    def stop(self):
+    def stop(self, quantized):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
         if self.lastState == RECORDING_STATE:
@@ -74,7 +78,13 @@ class DlTrack(Track):
             self.updateState(CLEAR_STATE)
             self.ignore_stop = True
         else:
-            self.request_control(STOP_CONTROL)
+            if quantized:
+                self.request_control(STOP_CONTROL)
+            else:
+                self.send_message("entering stop state")
+                self.state.value = STOP_STATE
+            self.updateState(STOP_STATE)
+
         # todo clean this up, follow tempo
         #self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
 
