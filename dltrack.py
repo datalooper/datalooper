@@ -62,7 +62,10 @@ class DlTrack(Track):
                 self.rectime = time()
                 self.state.value = RECORDING_STATE
         else:
-            self.request_control(RECORD_CONTROL)
+            if self.rectime == 0 or (time() - self.rectime) > .5:
+                self.send_message("rectime: " + str(time() - self.rectime))
+                self.rectime = time()
+                self.request_control(RECORD_CONTROL)
 
     def play(self, quantized):
         if self.lastState == STOP_STATE:
@@ -86,7 +89,7 @@ class DlTrack(Track):
             else:
                 self.send_message("entering stop state")
                 self.state.value = STOP_STATE
-            self.updateState(STOP_STATE)
+                self.updateState(STOP_STATE)
 
         # todo clean this up, follow tempo
         #self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
@@ -118,6 +121,7 @@ class DlTrack(Track):
         self.send_message("bpm: " + str(bpm))
         self.__parent.set_bpm(bpm)
         self.req_bpm = True
+        self.rectime = 0
 
     def toggle_new_session_mode(self, new_session_mode):
         self.new_session_mode = new_session_mode
