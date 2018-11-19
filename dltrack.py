@@ -18,12 +18,15 @@ class DlTrack(Track):
         self.__parent = parent
         self.quantizeTicks = -1
         self.quantization = -1
-        self._notification_timer = -1
         self.lastState = CLEAR_STATE
+        self.req_bpm = False
         self.updateState(self.lastState)
         self.track.add_arm_listener(self.set_arm)
         if not self.state.value_has_listener(self._on_looper_param_changed):
             self.state.add_value_listener(self._on_looper_param_changed)
+
+        self.song.add_tempo_listener(self.on_tempo_change)
+        self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
 
     def set_arm(self):
         if super(DlTrack, self).set_arm():
@@ -52,10 +55,8 @@ class DlTrack(Track):
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         if self.new_session_mode:
             if self.lastState == RECORDING_STATE:
+                self.updateState(STOP_STATE)
                 self.calculateBPM(time() - self.rectime)
-                self.updateState(PLAYING_STATE)
-                self.state.value = PLAYING_STATE
-                self.__parent.new_session(0,0)
             elif self.lastState == CLEAR_STATE:
                 self.updateState(RECORDING_STATE)
                 self.rectime = time()
@@ -113,17 +114,21 @@ class DlTrack(Track):
         bpm8 = 8 / recmin
         bpm16 = 16 / recmin
         bpms = [bpm4, bpm8, bpm16]
-        bpm = min(bpms, key=lambda x: abs(x - 100))
+        bpm = min(bpms, key=lambda x: abs(x - 80))
         self.send_message("bpm: " + str(bpm))
         self.__parent.set_bpm(bpm)
+        self.req_bpm = True
 
     def toggle_new_session_mode(self, new_session_mode):
         self.new_session_mode = new_session_mode
-        # if new_session_mode:
-        #     self.quantization = self.device.parameters[QUANTIZATION].value
-        #     self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
-        #     self.device.parameters[QUANTIZATION].value = NO_QUANTIZATION
-        #     self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
-        # else:
-        #     self.device.parameters[QUANTIZATION].value = self.quantization
-        #     self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
+
+    def on_tempo_change(self):
+        self.timer.start()
+
+    def on_tempo_change_callback(self):
+        if self.new_session_mode and self.req_bpm:
+            self.updateState(PLAYING_STATE)
+            self.__parent.jump_to_next_bar(0,0)
+            self.state.value = PLAYING_STATE
+            self.__parent.new_session(0,0)
+            self.req_bpm = False

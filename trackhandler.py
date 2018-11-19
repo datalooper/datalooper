@@ -5,7 +5,7 @@ from clmiditrack import ClMidiTrack
 from consts import *
 from datalooper.cltrack import ClTrack
 from dltrack import DlTrack
-
+import Live
 
 class TrackHandler:
     """ Class handling looper & clip tracks """
@@ -59,12 +59,12 @@ class TrackHandler:
                 tracks.append(track)
         return tracks
 
-    def record(self, instance, looper_num):
+    def record(self, instance, looper_num, looper):
         self.send_message("recording")
         req_track = instance * 3 + looper_num
         self.stopAll = True
         for track in self.tracks:
-            if track.trackNum == req_track:
+            if isinstance(track, looper) and track.trackNum == req_track:
                 track.record()
 
     def stop(self, instance, looper_num):
@@ -106,12 +106,13 @@ class TrackHandler:
         return True
 
     def mute_all(self, instance, looper_num):
-        for track in self.tracks:
-            if track.track.mute == 1:
-                track.track.mute = 0
-            else:
-                track.track.mute = 1
-        self.send_message("mute all")
+        if not self.new_session_mode:
+            for track in self.tracks:
+                if track.track.mute == 1:
+                    track.track.mute = 0
+                else:
+                    track.track.mute = 1
+            self.send_message("mute all")
 
     def new_session(self, instance, looper_num):
         self.send_message("New session")
@@ -143,6 +144,13 @@ class TrackHandler:
     def enter_config(self, instance, looper_num):
         self.send_message("Config toggled")
         self.send_sysex(0, 5, 0)
+
+    def record_looper(self, instance, looper_num):
+        self.record(instance, looper_num, DlTrack)
+
+    def record_clip(self, instance, looper_num):
+        if not self.new_session_mode:
+            self.record(instance, looper_num, ClTrack)
 
     def jump_to_next_bar(self, instance, looper_num):
         rec_flag = self.song.record_mode
@@ -197,6 +205,9 @@ class TrackHandler:
             for track in self.tracks:
                 track.track.add_arm_listener(track.set_arm)
 
+    def tap_tempo(self, looper, instance):
+        if self.new_session_mode:
+            self.song.tap_tempo()
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):
