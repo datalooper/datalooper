@@ -174,7 +174,7 @@ class looper(ControlSurface):
         address_map.setdefault((-1, 0, 3, 2, 2), []).append(self.__track_handler.new_session)
         address_map.setdefault((-1, 0, 3, 2, 5), []).append(self.__track_handler.enter_config)
         address_map.setdefault((-1, -1, -1, 3, -1), []).append(self.__track_handler.change_instance)
-        address_map.setdefault((255, 255, 255, 255, 255), []).append(self.__track_handler.exit_config)
+        address_map.setdefault((-1, 127, 127, 127, 127), []).append(self.__track_handler.exit_config)
 
         # address_map = {
         #     (-1, -1, 0, 0, 0): self.__track_handler.record_looper,

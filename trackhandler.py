@@ -160,6 +160,7 @@ class TrackHandler:
         self.song.record_mode = rec_flag
 
     def exit_config(self, instance, looper_num):
+        self.send_message("exiting config")
         self.exit_new_session(instance, looper_num)
 
     def change_instance(self, instance, looper_num):
