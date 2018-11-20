@@ -18,7 +18,6 @@ class DlTrack(Track):
         self.__parent = parent
         self.quantizeTicks = -1
         self.quantization = -1
-        self.lastState = CLEAR_STATE
         self.req_bpm = False
         self.updateState(self.lastState)
         self.track.add_arm_listener(self.set_arm)

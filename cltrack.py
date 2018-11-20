@@ -10,7 +10,6 @@ class ClTrack(Track):
         self.__parent = parent
         self.clipSlot = -1
         self.lastClip = -1
-        self.state = -1
         self.clipStopping = False
         self.track.add_arm_listener(self.set_arm)
 
@@ -20,6 +19,14 @@ class ClTrack(Track):
         self.lastState = self.check_clip_slot_state()
 
         self.updateState(self.lastState)
+
+    def find_last_slot(self):
+        has_clip_list = []
+        for clip_slot in self.track.clip_slots:
+            has_clip_list.append(clip_slot.has_clip)
+
+        return len(has_clip_list) - 1 - has_clip_list[::-1].index(True)
+
 
     def set_arm(self):
         if self.track.arm:
@@ -80,7 +87,7 @@ class ClTrack(Track):
             return CLEAR_STATE
         elif self.clipSlot == -1 and self.track.playing_slot_index >= 0:
             self.clipSlot = self.track.clip_slots[self.track.playing_slot_index]
-            self.add_listeners()
+            self.add_listeners(self.clipSlot)
         elif self.clipSlot == -1 and self.track.fired_slot_index >= 0:
             self.clipSlot = self.track.clip_slots[self.track.fired_slot_index]
         return self.check_clip_state(self.clipSlot)
@@ -111,14 +118,23 @@ class ClTrack(Track):
             if self.clipSlot.has_clip_has_listener(self.on_clip_change):
                 self.clipSlot.remove_has_clip_listener(self.on_clip_change)
             self.clipSlot = -1
+        last_slot = self.__parent.find_last_slot()
+        if not self.track.clip_slots[last_slot].has_clip:
+            self.clipSlot = self.track.clip_slots[last_slot]
+        else:
+            self.clipSlot = self.track.clip_slots[last_slot + 1]
 
-        for clip_slot in self.track.clip_slots:
-            if not clip_slot.has_clip:
-                self.clipSlot = clip_slot
-                if not self.clipSlot.has_clip_has_listener(self.on_clip_change):
-                    self.clipSlot.add_has_clip_listener(self.on_clip_change)
-                    self.updateState(CLEAR_STATE)
-                    return
+        if not self.clipSlot.has_clip_has_listener(self.on_clip_change):
+            self.clipSlot.add_has_clip_listener(self.on_clip_change)
+        self.updateState(CLEAR_STATE)
+
+        # for clip_slot in self.track.clip_slots:
+        #     if not clip_slot.has_clip:
+        #         self.clipSlot = clip_slot
+        #         if not self.clipSlot.has_clip_has_listener(self.on_clip_change):
+        #             self.clipSlot.add_has_clip_listener(self.on_clip_change)
+        #         self.updateState(CLEAR_STATE)
+        #         return
 
     def checkActiveClip(self):
         self.clipSlot = -1
@@ -155,7 +171,4 @@ class ClTrack(Track):
 
     def updateState(self, state):
         self.__parent.send_message("updating state: " + str(state) + " Tracknum: " + str(self.trackNum))
-        if self.track.can_be_armed and not self.track.arm:
-            super(ClTrack, self).updateState(DISARMED_STATE)
-        else:
-            super(ClTrack, self).updateState(state)
+        super(ClTrack, self).updateState(state)

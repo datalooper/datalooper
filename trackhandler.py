@@ -85,7 +85,11 @@ class TrackHandler:
     def clear_all(self, instance, looper_num):
         if not self.new_session_mode:
             for track in self.tracks:
-                track.clear()
+                if isinstance(track, ClTrack):
+                    track.stop(False)
+                    track.getNewClipSlot()
+                else:
+                    track.clear()
         self.send_message("clear all")
 
     def toggle_start_stop_all(self, instance, looper_num):
@@ -101,7 +105,9 @@ class TrackHandler:
 
     def check_uniform_state(self, state):
         for track in self.tracks:
-            if track.state.value != state:
+            self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
+
+            if track.lastState != state and track.lastState != CLEAR_STATE:
                 return False
         return True
 
@@ -152,6 +158,13 @@ class TrackHandler:
         if not self.new_session_mode:
             self.record(instance, looper_num, ClTrack)
 
+    def find_last_slot(self):
+        index = []
+        for cl_track in self.tracks:
+            if isinstance(cl_track, ClTrack) :
+                index.append(cl_track.find_last_slot())
+        return max(index)
+
     def jump_to_next_bar(self, instance, looper_num):
         rec_flag = self.song.record_mode
         time = int(self.song.current_song_time) + (self.song.signature_denominator - (int(self.song.current_song_time) % self.song.signature_denominator ))
@@ -169,14 +182,14 @@ class TrackHandler:
         while i < NUM_TRACKS:
             self.send_sysex(instance * NUM_TRACKS + i, CHANGE_STATE_COMMAND, CLEAR_STATE)
             i += 1
-        for loop_track in self.tracks:
-            if instance * 3 <= loop_track.trackNum < instance * 3 + NUM_TRACKS:
+        new_tracks = [loop_track for loop_track in self.tracks if instance * 3 <= loop_track.trackNum < instance * 3 + NUM_TRACKS]
+        for loop_track in new_tracks:
+            if isinstance(loop_track, ClTrack):
+                for alt_track in self.tracks:
+                    if alt_track != loop_track and alt_track.track.current_input_routing == loop_track.track.current_input_routing:
+                        alt_track.track.arm = 0
+                loop_track.track.arm = 1
                 self.send_sysex(loop_track.trackNum, CHANGE_STATE_COMMAND, loop_track.lastState)
-                if isinstance(loop_track, ClTrack):
-                    loop_track.track.current_monitoring_state = 1
-            else:
-                if isinstance(loop_track, ClTrack):
-                    loop_track.track.current_monitoring_state = 2
 
     def bank(self, instance, looper_num):
         self.__parent.send_program_change(looper_num)
