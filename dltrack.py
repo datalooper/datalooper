@@ -11,7 +11,6 @@ class DlTrack(Track):
         self.tempo_control = -1
         self.device = device
         self.state = device.parameters[STATE]
-        self.lastState = CLEAR_STATE
         self.rectime = 0
         self.ignore_stop = False
         self.req_record = True
@@ -19,8 +18,22 @@ class DlTrack(Track):
         self.__parent = parent
         self.quantizeTicks = -1
         self.quantization = -1
+<<<<<<< HEAD
         self._notification_timer = -1
         self.new_session_mode = False
+=======
+        self.req_bpm = False
+        self.updateState(self.lastState)
+        self.track.add_arm_listener(self.set_arm)
+        if not self.state.value_has_listener(self._on_looper_param_changed):
+            self.state.add_value_listener(self._on_looper_param_changed)
+
+        self.song.add_tempo_listener(self.on_tempo_change)
+        self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
+
+    def set_arm(self):
+        self.updateState(CLEAR_STATE)
+>>>>>>> 4bd5a188f69dc0b9287a6a0fe3130311a326c026
 
     def _on_looper_param_changed(self):
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
@@ -32,16 +45,6 @@ class DlTrack(Track):
     def send_message(self, message):
         self.__parent.send_message(message)
 
-    def updateState(self, state):
-        if self.new_session_mode:
-            if state == CLEAR_STATE:
-                self.state.value = STOP_STATE
-            else:
-                self.state.value = state
-        self.lastState = state
-        self.send_message("updating LED " + str(self.lastState))
-        self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
-
     def request_control(self, control):
         self.send_message("Requesting control: " + str(control))
         self.send_sysex(self.trackNum, REQUEST_CONTROL_COMMAND, control)
@@ -51,28 +54,58 @@ class DlTrack(Track):
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         if self.new_session_mode:
             if self.lastState == RECORDING_STATE:
+                self.state.value = STOP_STATE
                 self.calculateBPM(time() - self.rectime)
-                self.updateState(PLAYING_STATE)
-                self.__parent.new_session(0,0)
             elif self.lastState == CLEAR_STATE:
                 self.updateState(RECORDING_STATE)
                 self.rectime = time()
+                self.state.value = RECORDING_STATE
         else:
+<<<<<<< HEAD
             if not self.state.value_has_listener(self._on_looper_param_changed):
                 self.state.add_value_listener(self._on_looper_param_changed)
             self.request_control(RECORD_CONTROL)
 
     def stop(self):
+=======
+            if self.rectime == 0 or (time() - self.rectime) > .5:
+                self.send_message("rectime: " + str(time() - self.rectime))
+                self.rectime = time()
+                self.request_control(RECORD_CONTROL)
+
+    def play(self, quantized):
+        if self.lastState == STOP_STATE:
+            self.send_message("attempting play")
+            if quantized:
+                self.request_control(RECORD_CONTROL)
+            else:
+                self.state.value = PLAYING_STATE
+            self.updateState(PLAYING_STATE)
+
+    def stop(self, quantized):
+>>>>>>> 4bd5a188f69dc0b9287a6a0fe3130311a326c026
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
         if self.lastState == RECORDING_STATE:
             self.request_control(CLEAR_CONTROL)
             self.updateState(CLEAR_STATE)
             self.ignore_stop = True
-        else:
-            self.request_control(STOP_CONTROL)
+        elif self.lastState != STOP_STATE and self.lastState != CLEAR_STATE:
+            if quantized:
+                self.request_control(STOP_CONTROL)
+            else:
+                self.send_message("entering stop state")
+                self.state.value = STOP_STATE
+                self.updateState(STOP_STATE)
+
         # todo clean this up, follow tempo
         #self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
+
+    def toggle_playback(self):
+        if self.lastState == STOP_STATE:
+            self.request_control(RECORD_CONTROL)
+        elif self.lastState == PLAYING_STATE:
+            self.request_control(STOP_CONTROL)
 
     def undo(self):
         self.request_control(UNDO_CONTROL)
@@ -87,21 +120,43 @@ class DlTrack(Track):
 
     def calculateBPM(self, loop_length):
         recmin = loop_length / 60
+        bpm1 = 1 / recmin
+        bpm2 = 2 / recmin
         bpm4 = 4 / recmin
         bpm8 = 8 / recmin
         bpm16 = 16 / recmin
+<<<<<<< HEAD
         bpms = [bpm4, bpm8, bpm16]
         bpm = min(bpms, key=lambda x: abs(x - 100))
+=======
+        bpm32 = 32 / recmin
+        bpm64 = 64 / recmin
+        bpms = [bpm1, bpm2, bpm4, bpm8, bpm16, bpm32, bpm64]
+        bpm = min(bpms, key=lambda x: abs(x - 90))
+>>>>>>> 4bd5a188f69dc0b9287a6a0fe3130311a326c026
         self.send_message("bpm: " + str(bpm))
         self.__parent.set_bpm(bpm)
+        self.req_bpm = True
+        self.rectime = 0
 
     def toggle_new_session_mode(self, new_session_mode):
         self.new_session_mode = new_session_mode
-        if new_session_mode:
-            self.quantization = self.device.parameters[QUANTIZATION].value
-            self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
-            self.device.parameters[QUANTIZATION].value = NO_QUANTIZATION
-            self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
-        else:
-            self.device.parameters[QUANTIZATION].value = self.quantization
+        if not self.new_session_mode :
             self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
+        else:
+            self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
+            self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
+
+    def on_tempo_change(self):
+        self.timer.start()
+
+    def on_tempo_change_callback(self):
+        if self.new_session_mode and self.req_bpm:
+            self.updateState(PLAYING_STATE)
+            self.__parent.jump_to_next_bar(0,0)
+            self.state.value = PLAYING_STATE
+            self.__parent.new_session(0,0)
+            self.req_bpm = False
+
+    def updateState(self, state):
+        super(DlTrack, self).updateState(state)

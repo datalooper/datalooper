@@ -62,9 +62,11 @@ class looper(ControlSurface):
                 if string_pos != -1:
                     # Checks for double digits
                     if len(track.name) >= string_pos + 5 and track.name[string_pos + 4: string_pos + 5].isdigit():
-                        track_num = int(track.name[string_pos + 3: string_pos + 5])
+                        # 0 indexed
+                        track_num = int(track.name[string_pos + 3: string_pos + 5]) - 1
                     else:
-                        track_num = int(track.name[string_pos + 3: string_pos + 4])
+                        # 0 indexed
+                        track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
                     self.__track_handler.append_tracks(track, track_num, key)
                 # adds name change listener to all tracks
                 if not track.name_has_listener(self.scan_tracks):
@@ -74,9 +76,7 @@ class looper(ControlSurface):
         self.log_message(m)
 
     def set_bpm(self, bpm):
-        self.song().jump_by(1-self.song().current_song_time % 1)
         self.song().tempo = bpm
-
 
     def on_track_change(self):
         self.scan_tracks()
@@ -98,7 +98,7 @@ class looper(ControlSurface):
         self.__c_instance.send_midi(midi_event_bytes)
 
     def send_sysex(self, looper, control, data):
-        self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
+        #self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
         looper_status_sysex = (240, looper, control, 3, data, 247)
         self.send_midi(looper_status_sysex)
 
@@ -126,12 +126,13 @@ class looper(ControlSurface):
 		never get any MIDI messages at all.
 		"""
         script_handle = self.__c_instance.handle()
-        self.log_message("building map")
+        #self.log_message("building map")
         for i in range(128):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
         #self.__track_handler.clear_all(0, 0)
         #self.send_sysex(0, RESET_COMMAND, 0)
+
 
     def receive_midi_notes(self, midi_bytes):
         note_num = midi_bytes[1]
@@ -155,12 +156,11 @@ class looper(ControlSurface):
         looper_num = midi_bytes[3]
         control_num = midi_bytes[4]
         action = midi_bytes[6]
-        if action == 2:
-            long_press_seconds = midi_bytes[7]
-        else:
-            long_press_seconds = 0
+        long_press_seconds = midi_bytes[7]
+
         data = [instance, looper_num, control_num, action, long_press_seconds]
 
+<<<<<<< HEAD
         address_map = {
             (-1, -1, 0, 0, 0): self.__track_handler.record,
             (-1, -1, 1, 1, 0): self.__track_handler.stop,
@@ -177,6 +177,46 @@ class looper(ControlSurface):
             (255, 255, 255, 255, 255): self.__track_handler.exit_config
 
         }
+=======
+        address_map = {}
+        address_map.setdefault((-1, -1, 0, 0, 0), []).append(self.__track_handler.record_looper)
+        address_map.setdefault((-1, -1, 0, 1, 0), []).append(self.__track_handler.record_clip)
+        address_map.setdefault((-1, -1, 0, 2, 1), []).append(self.__track_handler.new_clip)
+        address_map.setdefault((-1, -1, 1, 1, 0), []).append(self.__track_handler.stop)
+        address_map.setdefault((-1, -1, 2, 1, 0), []).append(self.__track_handler.undo)
+        address_map.setdefault((-1, -1, 2, 2, 1), []).append(self.__track_handler.bank)
+        address_map.setdefault((-1, -1, 1, 2, 1), []).append(self.__track_handler.clear)
+        address_map.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.clear_all)
+        address_map.setdefault((-1, 0, 3, 1, 0), []).append(self.__track_handler.toggle_start_stop_all)
+        address_map.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.mute_all)
+        address_map.setdefault((-1, 1, 3, 1, -1), []).append(self.__track_handler.mute_all)
+        address_map.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.tap_tempo)
+        address_map.setdefault((-1, 2, 3, 2, 2), []).append(self.__track_handler.new_session)
+        address_map.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.exit_new_session)
+        address_map.setdefault((-1, 0, 3, 2, 5), []).append(self.__track_handler.enter_config)
+        address_map.setdefault((-1, -1, -1, 3, -1), []).append(self.__track_handler.change_instance)
+        address_map.setdefault((-1, 127, 127, 127, 127), []).append(self.__track_handler.exit_config)
+
+        # address_map = {
+        #     (-1, -1, 0, 0, 0): self.__track_handler.record_looper,
+        #     (-1, -1, 0, 1, 0): self.__track_handler.record_clip,
+        #     (-1, -1, 0, 2, 1): self.__track_handler.new_clip,
+        #     (-1, -1, 1, 1, 0): self.__track_handler.stop,
+        #     (-1, -1, 2, 1, 0): self.__track_handler.undo,
+        #     (-1, -1, 2, 2, 1): self.__track_handler.bank,
+        #     (-1, -1, 1, 2, 1): self.__track_handler.clear,
+        #     (-1, 0, 3, 1, 0): self.__track_handler.clear_all,
+        #     (-1, 2, 3, 1, 0): self.__track_handler.toggle_start_stop_all,
+        #     (-1, 1, 3, 0, 0): self.__track_handler.mute_all,
+        #     (-1, 1, 3, 1, -1): self.__track_handler.mute_all,
+        #     (-1, 0, 3, 2, 2): self.__track_handler.new_session,
+        #     (-1, 0, 3, 2, 1): self.__track_handler.exit_new_session,
+        #     (-1, 0, 3, 2, 5): self.__track_handler.enter_config,
+        #     (-1, -1, -1, 3, -1): self.__track_handler.change_instance,
+        #     (255, 255, 255, 255, 255): self.__track_handler.exit_config
+        #
+        # }
+>>>>>>> 4bd5a188f69dc0b9287a6a0fe3130311a326c026
 
         needle = ()
         for keys in address_map.keys():
@@ -187,9 +227,10 @@ class looper(ControlSurface):
                     needle = keys
 
         # Get the function from switcher dictionary
-        func = address_map.get(needle)
-        # Execute the function
-        if func is not None:
-            print func(instance, looper_num)
+        for func in self.get_values_if_any(address_map, needle):
+            # Execute the function
+            if func is not None:
+                print func(instance, looper_num)
 
-
+    def get_values_if_any(self, d, key):
+        return d.get(key, [])

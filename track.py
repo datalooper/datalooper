@@ -8,9 +8,9 @@ class Track(object):
         self.__parent = parent
         self.track = track
         self.trackNum = trackNum
-        self.lastState = CLEAR_STATE
         self.song = song
         self.req_record = 0
+<<<<<<< HEAD
         self.track_arm = self.track.arm
         #self.track.add_arm_listener(self.set_arm)
 
@@ -23,6 +23,15 @@ class Track(object):
     def arm_track(self):
         self.track_arm = self.track.arm
         self.track.arm = 1
+=======
+        self.artificial_arm = -1
+        self.orig_arm = self.track.arm
+        self.new_session_mode = False
+        self.lastState = CLEAR_STATE
+
+    def new_clip(self):
+        pass
+>>>>>>> 4bd5a188f69dc0b9287a6a0fe3130311a326c026
 
     def send_sysex(self, looper, control, data):
         self.__parent.send_sysex(looper, control, data)
@@ -30,14 +39,13 @@ class Track(object):
     def clearListener(self):
         pass
 
+    def toggle_playback(self):
+        pass
+
     def send_message(self, message):
         self.__parent.send_message(message)
 
-    def record(self):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + "record pressed")
-
-    def stop(self):
+    def stop(self, quantized):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + "stop pressed")
 
@@ -54,3 +62,8 @@ class Track(object):
 
     def toggle_new_session_mode(self, on):
         pass
+
+    def updateState(self, state):
+        self.send_message("updating state: " + str(state))
+        self.lastState = state
+        self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
