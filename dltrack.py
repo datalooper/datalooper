@@ -77,7 +77,7 @@ class DlTrack(Track):
             self.request_control(CLEAR_CONTROL)
             self.updateState(CLEAR_STATE)
             self.ignore_stop = True
-        elif self.lastState != STOP_STATE:
+        elif self.lastState != STOP_STATE and self.lastState != CLEAR_STATE:
             if quantized:
                 self.request_control(STOP_CONTROL)
             else:

@@ -98,9 +98,12 @@ class TrackHandler:
         if not self.new_session_mode and not self.check_uniform_state([CLEAR_STATE]):
             if self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
                 self.jump_to_next_bar(instance, looper_num)
+                self.song.metronome = self.metro
                 for track in self.tracks:
                     track.play(False)
             else:
+                self.metro = self.song.metronome
+                self.song.metronome = 0
                 for track in self.tracks:
                     track.stop(False)
 
