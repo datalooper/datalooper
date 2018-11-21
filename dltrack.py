@@ -28,11 +28,7 @@ class DlTrack(Track):
         self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
 
     def set_arm(self):
-        if super(DlTrack, self).set_arm():
-            if self.track.arm:
-                self.updateState(CLEAR_STATE)
-            else:
-                self.updateState(DISARMED_STATE)
+        self.updateState(CLEAR_STATE)
 
     def _on_looper_param_changed(self):
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
@@ -44,7 +40,6 @@ class DlTrack(Track):
     def send_message(self, message):
         self.__parent.send_message(message)
 
-
     def request_control(self, control):
         self.send_message("Requesting control: " + str(control))
         self.send_sysex(self.trackNum, REQUEST_CONTROL_COMMAND, control)
@@ -54,7 +49,7 @@ class DlTrack(Track):
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         if self.new_session_mode:
             if self.lastState == RECORDING_STATE:
-                self.updateState(STOP_STATE)
+                self.state.value = STOP_STATE
                 self.calculateBPM(time() - self.rectime)
             elif self.lastState == CLEAR_STATE:
                 self.updateState(RECORDING_STATE)
@@ -82,7 +77,7 @@ class DlTrack(Track):
             self.request_control(CLEAR_CONTROL)
             self.updateState(CLEAR_STATE)
             self.ignore_stop = True
-        else:
+        elif self.lastState != STOP_STATE:
             if quantized:
                 self.request_control(STOP_CONTROL)
             else:
@@ -112,11 +107,15 @@ class DlTrack(Track):
 
     def calculateBPM(self, loop_length):
         recmin = loop_length / 60
+        bpm1 = 1 / recmin
+        bpm2 = 2 / recmin
         bpm4 = 4 / recmin
         bpm8 = 8 / recmin
         bpm16 = 16 / recmin
-        bpms = [bpm4, bpm8, bpm16]
-        bpm = min(bpms, key=lambda x: abs(x - 80))
+        bpm32 = 32 / recmin
+        bpm64 = 64 / recmin
+        bpms = [bpm1, bpm2, bpm4, bpm8, bpm16, bpm32, bpm64]
+        bpm = min(bpms, key=lambda x: abs(x - 90))
         self.send_message("bpm: " + str(bpm))
         self.__parent.set_bpm(bpm)
         self.req_bpm = True
@@ -124,6 +123,11 @@ class DlTrack(Track):
 
     def toggle_new_session_mode(self, new_session_mode):
         self.new_session_mode = new_session_mode
+        if not self.new_session_mode :
+            self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
+        else:
+            self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
+            self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
 
     def on_tempo_change(self):
         self.timer.start()
@@ -135,3 +139,6 @@ class DlTrack(Track):
             self.state.value = PLAYING_STATE
             self.__parent.new_session(0,0)
             self.req_bpm = False
+
+    def updateState(self, state):
+        super(DlTrack, self).updateState(state)

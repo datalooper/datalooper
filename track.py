@@ -49,11 +49,6 @@ class Track(object):
         pass
 
     def updateState(self, state):
-        if self.new_session_mode:
-            if state == CLEAR_STATE:
-                self.state = STOP_STATE
-            else:
-                self.state = state
         self.send_message("updating state: " + str(state))
         self.lastState = state
         self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)

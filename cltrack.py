@@ -12,7 +12,7 @@ class ClTrack(Track):
         self.lastClip = -1
         self.clipStopping = False
         self.track.add_arm_listener(self.set_arm)
-
+        self.ignoreState = False
         if not track.fired_slot_index_has_listener(self.on_slot_fired):
             track.add_fired_slot_index_listener(self.on_slot_fired)
 
@@ -24,9 +24,12 @@ class ClTrack(Track):
         has_clip_list = []
         for clip_slot in self.track.clip_slots:
             has_clip_list.append(clip_slot.has_clip)
-
-        return len(has_clip_list) - 1 - has_clip_list[::-1].index(True)
-
+        try:
+            last_slot = len(has_clip_list) - 1 - has_clip_list[::-1].index(True)
+        except ValueError:
+            self.send_message("value error")
+            last_slot = 0
+        return last_slot
 
     def set_arm(self):
         if self.track.arm:
@@ -119,6 +122,7 @@ class ClTrack(Track):
                 self.clipSlot.remove_has_clip_listener(self.on_clip_change)
             self.clipSlot = -1
         last_slot = self.__parent.find_last_slot()
+        self.send_message("last slot: " + str(last_slot))
         if not self.track.clip_slots[last_slot].has_clip:
             self.clipSlot = self.track.clip_slots[last_slot]
         else:

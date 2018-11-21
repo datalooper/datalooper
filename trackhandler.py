@@ -7,6 +7,7 @@ from datalooper.cltrack import ClTrack
 from dltrack import DlTrack
 import Live
 
+
 class TrackHandler:
     """ Class handling looper & clip tracks """
 
@@ -86,16 +87,15 @@ class TrackHandler:
         if not self.new_session_mode:
             for track in self.tracks:
                 if isinstance(track, ClTrack):
-                    track.stop(False)
                     track.getNewClipSlot()
+                    track.stop(False)
                 else:
                     track.clear()
         self.send_message("clear all")
 
     def toggle_start_stop_all(self, instance, looper_num):
-        self.send_message(self.check_uniform_state(STOP_STATE))
-        if not self.new_session_mode:
-            if self.check_uniform_state(STOP_STATE):
+        if not self.new_session_mode and not self.check_uniform_state([CLEAR_STATE]):
+            if self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
                 self.jump_to_next_bar(instance, looper_num)
                 for track in self.tracks:
                     track.play(False)
@@ -106,8 +106,7 @@ class TrackHandler:
     def check_uniform_state(self, state):
         for track in self.tracks:
             self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
-
-            if track.lastState != state and track.lastState != CLEAR_STATE:
+            if track.lastState not in state:
                 return False
         return True
 
@@ -161,13 +160,14 @@ class TrackHandler:
     def find_last_slot(self):
         index = []
         for cl_track in self.tracks:
-            if isinstance(cl_track, ClTrack) :
+            if isinstance(cl_track, ClTrack):
                 index.append(cl_track.find_last_slot())
         return max(index)
 
     def jump_to_next_bar(self, instance, looper_num):
         rec_flag = self.song.record_mode
-        time = int(self.song.current_song_time) + (self.song.signature_denominator - (int(self.song.current_song_time) % self.song.signature_denominator ))
+        time = int(self.song.current_song_time) + (self.song.signature_denominator - (
+                    int(self.song.current_song_time) % self.song.signature_denominator))
         self.send_message("current time:" + str(self.song.current_song_time) + "time: " + str(time))
         self.song.current_song_time = time
         self.song.record_mode = rec_flag
@@ -182,7 +182,8 @@ class TrackHandler:
         while i < NUM_TRACKS:
             self.send_sysex(instance * NUM_TRACKS + i, CHANGE_STATE_COMMAND, CLEAR_STATE)
             i += 1
-        new_tracks = [loop_track for loop_track in self.tracks if instance * 3 <= loop_track.trackNum < instance * 3 + NUM_TRACKS]
+        new_tracks = [loop_track for loop_track in self.tracks if
+                      instance * 3 <= loop_track.trackNum < instance * 3 + NUM_TRACKS]
         for loop_track in new_tracks:
             if isinstance(loop_track, ClTrack):
                 for alt_track in self.tracks:
@@ -222,6 +223,7 @@ class TrackHandler:
     def tap_tempo(self, looper, instance):
         if self.new_session_mode:
             self.song.tap_tempo()
+
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):
