@@ -18,6 +18,7 @@ class TrackHandler:
         self.new_session_mode = False
         self.metro = self.song.metronome
         self.trackStore = []
+        self.taps = 0
 
     def disconnect(self):
         self.__parent.disconnect()
@@ -124,6 +125,7 @@ class TrackHandler:
         self.new_session_mode = not self.new_session_mode
         self.toggle_new_session()
 
+
     def exit_new_session(self, instance, looper_num):
         if self.new_session_mode:
             self.new_session_mode = False
@@ -134,6 +136,7 @@ class TrackHandler:
             self.send_sysex(0, 4, 1)
             self.metro = self.song.metronome
             self.song.metronome = 0
+            self.taps = 0
         else:
             self.send_sysex(0, 4, 0)
             self.song.metronome = self.metro
@@ -223,6 +226,10 @@ class TrackHandler:
     def tap_tempo(self, looper, instance):
         if self.new_session_mode:
             self.song.tap_tempo()
+            if self.taps >= 3:
+                self.song.metronome = self.metro
+            self.taps += 1
+
 
 
 class TempTrack(object):
