@@ -11,6 +11,18 @@ class Track(object):
         self.lastState = CLEAR_STATE
         self.song = song
         self.req_record = 0
+        self.track_arm = self.track.arm
+        #self.track.add_arm_listener(self.set_arm)
+
+    def set_arm(self):
+        self.track_arm = self.track.arm
+
+    def reset_arm(self):
+        self.track.arm = self.track_arm
+
+    def arm_track(self):
+        self.track_arm = self.track.arm
+        self.track.arm = 1
 
     def send_sysex(self, looper, control, data):
         self.__parent.send_sysex(looper, control, data)

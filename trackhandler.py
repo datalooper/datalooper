@@ -82,7 +82,7 @@ class TrackHandler:
         if not self.new_session_mode:
             for track in self.tracks:
                 track.clear()
-            self.send_message("clear all")
+        self.send_message("clear all")
 
     def stop_all(self, instance, looper_num):
         if not self.new_session_mode:
@@ -130,4 +130,13 @@ class TrackHandler:
         self.send_sysex(0, 5, 0)
 
     def exit_config(self, instance, looper_num):
-        pass
+        self.exit_new_session(instance, looper_num)
+
+    def change_instance(self, instance, looper_num):
+        self.send_message("changing instance to " + str(instance))
+        for track in self.tracks:
+            if instance * 3 <= track.trackNum <= instance * 3 + NUM_TRACKS:
+                self.send_sysex(track.trackNum, CHANGE_STATE_COMMAND, track.lastState)
+
+    def bank(self, instance, looper_num):
+        self.__parent.send_program_change(looper_num )

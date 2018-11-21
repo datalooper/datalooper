@@ -21,16 +21,13 @@ class DlTrack(Track):
         self.quantization = -1
         self._notification_timer = -1
         self.new_session_mode = False
-        self.state.add_value_listener(self._on_looper_param_changed)
-        for param in device.parameters:
-            self.send_message(param.name)
 
     def _on_looper_param_changed(self):
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
             return
         elif not self.new_session_mode:
+            self.send_message("Looper param changed: " + str(self.state.value))
             self.updateState(int(self.state.value))
-
 
     def send_message(self, message):
         self.__parent.send_message(message)
@@ -61,8 +58,9 @@ class DlTrack(Track):
                 self.updateState(RECORDING_STATE)
                 self.rectime = time()
         else:
+            if not self.state.value_has_listener(self._on_looper_param_changed):
+                self.state.add_value_listener(self._on_looper_param_changed)
             self.request_control(RECORD_CONTROL)
-
 
     def stop(self):
         self.__parent.send_message(
@@ -93,7 +91,7 @@ class DlTrack(Track):
         bpm8 = 8 / recmin
         bpm16 = 16 / recmin
         bpms = [bpm4, bpm8, bpm16]
-        bpm = min(bpms, key=lambda x: abs(x - 120))
+        bpm = min(bpms, key=lambda x: abs(x - 100))
         self.send_message("bpm: " + str(bpm))
         self.__parent.set_bpm(bpm)
 
