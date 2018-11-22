@@ -74,10 +74,10 @@ class DlTrack(Track):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
         if self.lastState == RECORDING_STATE:
-            self.request_control(CLEAR_CONTROL)
             self.updateState(CLEAR_STATE)
+            self.request_control(CLEAR_CONTROL)
             self.ignore_stop = True
-        elif self.lastState != STOP_STATE and self.lastState != CLEAR_STATE:
+        elif self.lastState != STOP_STATE:
             if quantized:
                 self.request_control(STOP_CONTROL)
             else:
@@ -106,18 +106,18 @@ class DlTrack(Track):
         self.updateState(CLEAR_STATE)
 
     def calculateBPM(self, loop_length):
-        recmin = loop_length / 60
-        bpm1 = 1 / recmin
-        bpm2 = 2 / recmin
-        bpm4 = 4 / recmin
-        bpm8 = 8 / recmin
-        bpm16 = 16 / recmin
-        bpm32 = 32 / recmin
-        bpm64 = 64 / recmin
-        bpms = [bpm1, bpm2, bpm4, bpm8, bpm16, bpm32, bpm64]
-        bpm = min(bpms, key=lambda x: abs(x - 90))
-        self.send_message("bpm: " + str(bpm))
+        loop_length_in_minutes = loop_length / 60
+        i = 1
+        bpms = []
+        closest_to_tempo = 90
+
+        while i <= 64:
+            i *= 2
+            bpms.append(i / loop_length_in_minutes)
+
+        bpm = min(bpms, key=lambda x: abs(x - closest_to_tempo))
         self.__parent.set_bpm(bpm)
+        self.send_message("bpm: " + str(bpm))
         self.req_bpm = True
         self.rectime = 0
 
@@ -135,10 +135,8 @@ class DlTrack(Track):
     def on_tempo_change_callback(self):
         if self.new_session_mode and self.req_bpm:
             self.updateState(PLAYING_STATE)
-            self.__parent.jump_to_next_bar(0,0)
             self.state.value = PLAYING_STATE
+            self.__parent.jump_to_next_bar(True)
             self.__parent.new_session(0,0)
             self.req_bpm = False
 
-    def updateState(self, state):
-        super(DlTrack, self).updateState(state)

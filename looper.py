@@ -52,7 +52,7 @@ class looper(ControlSurface):
 
         # clear CL# identified tracks
         self.__track_handler.clear_tracks()
-
+        track_nums = []
         # iterate through all tracks
         for track in tracks:
             # check for tracks with naming convention
@@ -67,10 +67,16 @@ class looper(ControlSurface):
                     else:
                         # 0 indexed
                         track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
+                    track_nums.append(track_num)
                     self.__track_handler.append_tracks(track, track_num, key)
-                # adds name change listener to all tracks
-                if not track.name_has_listener(self.scan_tracks):
-                    track.add_name_listener(self.scan_tracks)
+                    # adds name change listener to all tracks
+                    if not track.name_has_listener(self.scan_tracks):
+                        track.add_name_listener(self.scan_tracks)
+        i = 0
+        while i < NUM_TRACKS:
+            if i not in track_nums:
+                self.send_sysex(i, CHANGE_STATE_COMMAND, CLEAR_STATE)
+            i+=1
 
     def send_message(self, m):
         self.log_message(m)
@@ -166,13 +172,13 @@ class looper(ControlSurface):
         address_map.setdefault((-1, -1, 2, 1, 0), []).append(self.__track_handler.undo)
         address_map.setdefault((-1, -1, 2, 2, 1), []).append(self.__track_handler.bank)
         address_map.setdefault((-1, -1, 1, 2, 1), []).append(self.__track_handler.clear)
-        address_map.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.clear_all)
-        address_map.setdefault((-1, 0, 3, 1, 0), []).append(self.__track_handler.toggle_start_stop_all)
+        address_map.setdefault((-1, 0, 3, 0, 0), []).append(self.__track_handler.clear_all)
+        address_map.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.toggle_start_stop_all)
         address_map.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.mute_all)
         address_map.setdefault((-1, 1, 3, 1, -1), []).append(self.__track_handler.mute_all)
         address_map.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.tap_tempo)
-        address_map.setdefault((-1, 2, 3, 2, 2), []).append(self.__track_handler.new_session)
-        address_map.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.exit_new_session)
+        address_map.setdefault((-1, 0, 3, 2, 2), []).append(self.__track_handler.new_session)
+        address_map.setdefault((-1, 0, 3, 0, 0), []).append(self.__track_handler.exit_new_session)
         address_map.setdefault((-1, 0, 3, 2, 5), []).append(self.__track_handler.enter_config)
         address_map.setdefault((-1, -1, -1, 3, -1), []).append(self.__track_handler.change_instance)
         address_map.setdefault((-1, 127, 127, 127, 127), []).append(self.__track_handler.exit_config)

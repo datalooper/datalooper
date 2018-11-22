@@ -34,8 +34,6 @@ class ClTrack(Track):
     def set_arm(self):
         if self.track.arm:
             self.updateState(self.check_clip_slot_state())
-        else:
-            self.updateState(DISARMED_STATE)
 
     def on_slot_fired(self):
         self.send_message("On slot fired: " + str(self.trackNum))
@@ -78,9 +76,10 @@ class ClTrack(Track):
             self.clipSlot.clip.fire()
 
     def removeClip(self):
-        self.clipSlot.clip.remove_playing_status_listener(self.on_clip_status_change)
-        self.clipSlot.remove_has_clip_listener(self.on_clip_change)
-        self.clipSlot.delete_clip()
+        if self.clipSlot.has_clip:
+            self.clipSlot.clip.remove_playing_status_listener(self.on_clip_status_change)
+            self.clipSlot.remove_has_clip_listener(self.on_clip_change)
+            self.clipSlot.delete_clip()
         self.clipSlot = -1
         self.updateState(CLEAR_STATE)
 
@@ -120,13 +119,16 @@ class ClTrack(Track):
         if self.clipSlot != -1:
             if self.clipSlot.has_clip_has_listener(self.on_clip_change):
                 self.clipSlot.remove_has_clip_listener(self.on_clip_change)
+            if self.clipSlot.has_clip and self.clipSlot.clip.is_recording:
+                self.clipSlot.delete_clip()
             self.clipSlot = -1
         last_slot = self.__parent.find_last_slot()
         self.send_message("last slot: " + str(last_slot))
-        if not self.track.clip_slots[last_slot].has_clip:
+        if not self.track.clip_slots[last_slot].has_clip and not self.__parent.new_scene:
             self.clipSlot = self.track.clip_slots[last_slot]
         else:
             self.clipSlot = self.track.clip_slots[last_slot + 1]
+
 
         if not self.clipSlot.has_clip_has_listener(self.on_clip_change):
             self.clipSlot.add_has_clip_listener(self.on_clip_change)

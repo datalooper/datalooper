@@ -19,6 +19,11 @@ class TrackHandler:
         self.metro = self.song.metronome
         self.trackStore = []
         self.taps = 0
+        self.new_scene = False
+        self.stopAll = False
+        self.bpm = self.song.tempo
+        self.timerCounter = 0
+        self.timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
 
     def disconnect(self):
         self.__parent.disconnect()
@@ -62,9 +67,10 @@ class TrackHandler:
         return tracks
 
     def record(self, instance, looper_num, looper):
-        self.send_message("recording")
         req_track = instance * 3 + looper_num
-        self.stopAll = True
+        if self.stopAll:
+            self.song.metronome = self.metro
+            self.stopAll = False
         for track in self.tracks:
             if isinstance(track, looper) and track.trackNum == req_track:
                 track.record()
@@ -86,31 +92,44 @@ class TrackHandler:
 
     def clear_all(self, instance, looper_num):
         if not self.new_session_mode:
+            if not self.check_uniform_state_cl([CLEAR_STATE]):
+                self.new_scene = True
             for track in self.tracks:
                 if isinstance(track, ClTrack):
                     track.getNewClipSlot()
                     track.stop(False)
                 else:
                     track.clear()
+            self.new_scene = False
         self.send_message("clear all")
 
     def toggle_start_stop_all(self, instance, looper_num):
         if not self.new_session_mode and not self.check_uniform_state([CLEAR_STATE]):
             if self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
-                self.jump_to_next_bar(instance, looper_num)
+                self.jump_to_next_bar(True)
                 self.song.metronome = self.metro
+                self.stopAll = False
                 for track in self.tracks:
                     track.play(False)
             else:
                 self.metro = self.song.metronome
+                self.stopAll = True
                 self.song.metronome = 0
                 for track in self.tracks:
-                    track.stop(False)
+                    if track.lastState == PLAYING_STATE:
+                        track.stop(False)
 
     def check_uniform_state(self, state):
         for track in self.tracks:
             self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
             if track.lastState not in state:
+                return False
+        return True
+
+    def check_uniform_state_cl(self, state):
+        for track in self.tracks:
+            self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
+            if isinstance(track, ClTrack) and track.lastState not in state:
                 return False
         return True
 
@@ -157,9 +176,11 @@ class TrackHandler:
         self.send_sysex(0, 5, 0)
 
     def record_looper(self, instance, looper_num):
+        self.send_message("in record looper")
         self.record(instance, looper_num, DlTrack)
 
     def record_clip(self, instance, looper_num):
+        self.send_message("in record clip")
         if not self.new_session_mode:
             self.record(instance, looper_num, ClTrack)
 
@@ -170,13 +191,28 @@ class TrackHandler:
                 index.append(cl_track.find_last_slot())
         return max(index)
 
-    def jump_to_next_bar(self, instance, looper_num):
+    def jump_to_next_bar(self, changeBPM):
         rec_flag = self.song.record_mode
         time = int(self.song.current_song_time) + (self.song.signature_denominator - (
                     int(self.song.current_song_time) % self.song.signature_denominator))
         self.send_message("current time:" + str(self.song.current_song_time) + "time: " + str(time))
+        self.bpm = self.song.tempo
         self.song.current_song_time = time
         self.song.record_mode = rec_flag
+        if changeBPM:
+            self.timerCounter = 0
+            self.timer.start()
+
+    def execute_tempo_change(self):
+        #kills timer after 50ms just in case it wants to run forever for some reason
+        self.timerCounter += 1
+        if self.song.tempo != self.bpm:
+            self.song.tempo = self.bpm
+            self.send_message("timer counter: " + str(self.timerCounter))
+            self.timer.stop()
+        elif self.timerCounter > 50:
+            self.timer.stop()
+            self.send_message("timer counter: " + str(self.timerCounter))
 
     def exit_config(self, instance, looper_num):
         self.send_message("exiting config")
@@ -193,10 +229,10 @@ class TrackHandler:
         for loop_track in new_tracks:
             if isinstance(loop_track, ClTrack):
                 for alt_track in self.tracks:
-                    if alt_track != loop_track and alt_track.track.current_input_routing == loop_track.track.current_input_routing:
+                    if isinstance(alt_track, ClTrack) and alt_track not in new_tracks and alt_track.track.current_input_routing == loop_track.track.current_input_routing:
                         alt_track.track.arm = 0
                 loop_track.track.arm = 1
-                self.send_sysex(loop_track.trackNum, CHANGE_STATE_COMMAND, loop_track.lastState)
+            self.send_sysex(loop_track.trackNum, CHANGE_STATE_COMMAND, loop_track.lastState)
 
     def bank(self, instance, looper_num):
         self.__parent.send_program_change(looper_num)
