@@ -269,8 +269,6 @@ class TrackHandler:
                 self.song.metronome = self.metro
             self.taps += 1
 
-
-
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):
         self.name = name
