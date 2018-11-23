@@ -23,6 +23,7 @@ class TrackHandler:
         self.stopAll = False
         self.bpm = self.song.tempo
         self.timerCounter = 0
+        self.duplicates = []
         self.timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
 
     def disconnect(self):
@@ -52,6 +53,7 @@ class TrackHandler:
                 self.send_message("adding clip audio track")
                 self.tracks.append(ClAudioTrack(self, track, trackNum, self.song))
 
+    #if there are more that one tracks with same delimiter, check if one of them specifies LED control. Mark LED inactive on the alternate track
     def send_midi(self, midi):
         self.__parent.send_midi(midi)
 
@@ -146,7 +148,6 @@ class TrackHandler:
         self.send_message("New session")
         self.new_session_mode = not self.new_session_mode
         self.toggle_new_session()
-
 
     def exit_new_session(self, instance, looper_num):
         if self.new_session_mode:

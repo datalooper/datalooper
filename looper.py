@@ -72,11 +72,18 @@ class looper(ControlSurface):
                     # adds name change listener to all tracks
                     if not track.name_has_listener(self.scan_tracks):
                         track.add_name_listener(self.scan_tracks)
+        self.clear_unused_tracks(track_nums)
+        # sets tracks that have more than 1 instance, so LED control can be efficiently checked later
+        self.__track_handler.duplicates = set([x for x in track_nums if track_nums.count(x) > 1])
+
+
+    def clear_unused_tracks(self, track_nums):
+        # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
         i = 0
         while i < NUM_TRACKS:
             if i not in track_nums:
                 self.send_sysex(i, CHANGE_STATE_COMMAND, CLEAR_STATE)
-            i+=1
+            i += 1
 
     def send_message(self, m):
         self.log_message(m)
@@ -104,7 +111,7 @@ class looper(ControlSurface):
         self.__c_instance.send_midi(midi_event_bytes)
 
     def send_sysex(self, looper, control, data):
-        #self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
+        # self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
         looper_status_sysex = (240, looper, control, 3, data, 247)
         self.send_midi(looper_status_sysex)
 
@@ -132,11 +139,10 @@ class looper(ControlSurface):
 		never get any MIDI messages at all.
 		"""
         script_handle = self.__c_instance.handle()
-        #self.log_message("building map")
+        # self.log_message("building map")
         for i in range(128):
             Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
-
 
     def receive_midi_notes(self, midi_bytes):
         note_num = midi_bytes[1]
