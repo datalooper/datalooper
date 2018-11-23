@@ -33,8 +33,8 @@ class DlTrack(Track):
     def _on_looper_param_changed(self):
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
             return
-        elif not self.new_session_mode:
-            self.send_message("Looper param changed: " + str(self.state.value))
+        elif not self.new_session_mode :
+            self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
             self.updateState(int(self.state.value))
 
     def send_message(self, message):
