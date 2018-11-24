@@ -109,11 +109,13 @@ class DlTrack(Track):
         loop_length_in_minutes = loop_length / 60
         i = 1
         bpms = []
-        closest_to_tempo = 90
+        closest_to_tempo = 120
 
         while i <= 64:
             i *= 2
-            bpms.append(i / loop_length_in_minutes)
+            bpm = i / loop_length_in_minutes
+            if 140 > bpm > 50:
+                bpms.append(bpm)
 
         bpm = min(bpms, key=lambda x: abs(x - closest_to_tempo))
         self.__parent.set_bpm(bpm)
