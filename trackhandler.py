@@ -156,6 +156,7 @@ class TrackHandler:
             self.toggle_new_session()
 
     def toggle_new_session(self):
+        self.stopAll = False
         if self.new_session_mode:
             self.send_sysex(0, 4, 1)
             if self.metro  == -1:
