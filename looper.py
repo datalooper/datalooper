@@ -203,9 +203,9 @@ class looper(ControlSurface):
             ((-1, 0, 3, 1, 0), [self.__track_handler.toggle_start_stop_all]),
             ((-1, 1, 3, 0, 0), [self.__track_handler.mute_all, self.__track_handler.tap_tempo]),
             ((-1, 1, 3, 1, -1), [self.__track_handler.mute_all]),
-            ((-1, 0, 3, 2, 2), [self.__track_handler.new_session]),
+            ((-1, 2, 3, 2, 2), [self.__track_handler.new_session]),
             ((-1, 2, 3, 0, 0), [self.__track_handler.exit_new_session]),
-            ((-1, 0, 3, 2, 5), [self.__track_handler.enter_config]),
+            ((-1, 2, 3, 2, 5), [self.__track_handler.enter_config]),
             ((-1, -1, -1, 3, -1), [self.__track_handler.change_instance]),
             ((-1, 127, 127, 127, 127), [self.__track_handler.exit_config])
 
