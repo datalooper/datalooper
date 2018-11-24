@@ -94,6 +94,7 @@ class TrackHandler:
 
     def clear_all(self, instance, looper_num):
         if not self.new_session_mode:
+            self.song.metronome = self.metro 
             if not self.check_uniform_state_cl([CLEAR_STATE]):
                 self.new_scene = True
             for track in self.tracks:
