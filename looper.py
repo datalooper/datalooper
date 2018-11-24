@@ -199,7 +199,7 @@ class looper(ControlSurface):
             ((-1, -1, 2, 1, 0), [self.__track_handler.undo]),
             ((-1, -1, 2, 2, 1), [self.__track_handler.bank]),
             ((-1, -1, 1, 2, 1), [self.__track_handler.clear]),
-            ((-1, 2, 3, 1, 0), [self.__track_handler.clear_all]),
+            ((-1, 2, 3, 0, 0), [self.__track_handler.clear_all]),
             ((-1, 0, 3, 1, 0), [self.__track_handler.toggle_start_stop_all]),
             ((-1, 1, 3, 0, 0), [self.__track_handler.mute_all, self.__track_handler.tap_tempo]),
             ((-1, 1, 3, 1, -1), [self.__track_handler.mute_all]),
