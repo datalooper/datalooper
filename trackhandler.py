@@ -16,7 +16,7 @@ class TrackHandler:
         self.song = song
         self.tracks = []
         self.new_session_mode = False
-        self.metro = self.song.metronome
+        self.metro = -1
         self.trackStore = []
         self.taps = 0
         self.new_scene = False
@@ -94,7 +94,6 @@ class TrackHandler:
 
     def clear_all(self, instance, looper_num):
         if not self.new_session_mode:
-            self.song.metronome = self.metro 
             if not self.check_uniform_state_cl([CLEAR_STATE]):
                 self.new_scene = True
             for track in self.tracks:
@@ -111,6 +110,7 @@ class TrackHandler:
             if self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
                 self.jump_to_next_bar(True)
                 self.song.metronome = self.metro
+                self.metro = -1
                 self.stopAll = False
                 for track in self.tracks:
                     track.play(False)
@@ -158,7 +158,8 @@ class TrackHandler:
     def toggle_new_session(self):
         if self.new_session_mode:
             self.send_sysex(0, 4, 1)
-            self.metro = self.song.metronome
+            if self.metro  == -1:
+                self.metro = self.song.metronome
             self.song.metronome = 0
             self.taps = 0
         else:
