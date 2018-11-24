@@ -44,17 +44,21 @@ class DlTrack(Track):
         self.send_message("Requesting control: " + str(control))
         self.send_sysex(self.trackNum, REQUEST_CONTROL_COMMAND, control)
 
-    def record(self):
+    def record(self, quantized):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
-        if self.new_session_mode:
+        if self.new_session_mode or not quantized:
             if self.lastState == RECORDING_STATE:
                 self.state.value = STOP_STATE
-                self.calculateBPM(time() - self.rectime)
+                if self.new_session_mode:
+                    self.calculateBPM(time() - self.rectime)
             elif self.lastState == CLEAR_STATE:
                 self.updateState(RECORDING_STATE)
-                self.rectime = time()
+                if self.new_session_mode:
+                    self.rectime = time()
                 self.state.value = RECORDING_STATE
+            elif self.lastState == STOP_STATE:
+                self.state.value = PLAYING_STATE
         else:
             if self.rectime == 0 or (time() - self.rectime) > .5:
                 self.send_message("rectime: " + str(time() - self.rectime))

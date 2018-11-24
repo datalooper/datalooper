@@ -72,10 +72,15 @@ class TrackHandler:
         req_track = instance * 3 + looper_num
         if self.stopAll:
             self.song.metronome = self.metro
+            self.jump_to_next_bar(False)
             self.stopAll = False
-        for track in self.tracks:
-            if isinstance(track, looper) and track.trackNum == req_track:
-                track.record()
+            for track in self.tracks:
+                if isinstance(track, looper) and track.trackNum == req_track:
+                    track.record(False)
+        else:
+            for track in self.tracks:
+                if isinstance(track, looper) and track.trackNum == req_track:
+                    track.record(True)
 
     def stop(self, instance, looper_num):
         self.send_message("stop")
