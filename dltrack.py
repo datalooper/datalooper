@@ -78,7 +78,7 @@ class DlTrack(Track):
             self.request_control(CLEAR_CONTROL)
             self.ignore_stop = True
         elif self.lastState != STOP_STATE:
-            if quantized:
+            if quantized or not self.song.is_playing:
                 self.request_control(STOP_CONTROL)
             else:
                 self.send_message("entering stop state")

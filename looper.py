@@ -5,6 +5,7 @@ from _Framework.InputControlElement import *
 from _Framework.EncoderElement import *
 from consts import *
 from trackhandler import TrackHandler
+from collections import defaultdict
 import math
 
 
@@ -170,58 +171,52 @@ class looper(ControlSurface):
 
         data = [instance, looper_num, control_num, action, long_press_seconds]
 
-        address_map = {}
-        address_map.setdefault((-1, -1, 0, 0, 0), []).append(self.__track_handler.record_looper)
-        address_map.setdefault((-1, -1, 0, 1, 0), []).append(self.__track_handler.record_clip)
-        address_map.setdefault((-1, -1, 0, 2, 1), []).append(self.__track_handler.new_clip)
-        address_map.setdefault((-1, -1, 1, 1, 0), []).append(self.__track_handler.stop)
-        address_map.setdefault((-1, -1, 2, 1, 0), []).append(self.__track_handler.undo)
-        address_map.setdefault((-1, -1, 2, 2, 1), []).append(self.__track_handler.bank)
-        address_map.setdefault((-1, -1, 1, 2, 1), []).append(self.__track_handler.clear)
-        address_map.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.clear_all)
-        address_map.setdefault((-1, 0, 3, 0, 0), []).append(self.__track_handler.toggle_start_stop_all)
-        address_map.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.mute_all)
-        address_map.setdefault((-1, 1, 3, 1, -1), []).append(self.__track_handler.mute_all)
-        address_map.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.tap_tempo)
-        address_map.setdefault((-1, 2, 3, 2, 2), []).append(self.__track_handler.new_session)
-        address_map.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.exit_new_session)
-        address_map.setdefault((-1, 0, 3, 2, 5), []).append(self.__track_handler.enter_config)
-        address_map.setdefault((-1, -1, -1, 3, -1), []).append(self.__track_handler.change_instance)
-        address_map.setdefault((-1, 127, 127, 127, 127), []).append(self.__track_handler.exit_config)
+        # address_dict = {}
+        # address_dict.setdefault((-1, -1, 0, 0, 0), []).append(self.__track_handler.record_looper)
+        # address_dict.setdefault((-1, -1, 0, 1, 0), []).append(self.__track_handler.record_clip)
+        # address_dict.setdefault((-1, -1, 0, 2, 1), []).append(self.__track_handler.new_clip)
+        # address_dict.setdefault((-1, -1, 1, 1, 0), []).append(self.__track_handler.stop)
+        # address_dict.setdefault((-1, -1, 2, 1, 0), []).append(self.__track_handler.undo)
+        # address_dict.setdefault((-1, -1, 2, 2, 1), []).append(self.__track_handler.bank)
+        # address_dict.setdefault((-1, -1, 1, 2, 1), []).append(self.__track_handler.clear)
+        # address_dict.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.clear_all)
+        # address_dict.setdefault((-1, 0, 3, 0, 0), []).append(self.__track_handler.toggle_start_stop_all)
+        # address_dict.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.mute_all)
+        # address_dict.setdefault((-1, 1, 3, 1, -1), []).append(self.__track_handler.mute_all)
+        # address_dict.setdefault((-1, 1, 3, 0, 0), []).append(self.__track_handler.tap_tempo)
+        # address_dict.setdefault((-1, 2, 3, 2, 2), []).append(self.__track_handler.new_session)
+        # address_dict.setdefault((-1, 2, 3, 0, 0), []).append(self.__track_handler.exit_new_session)
+        # address_dict.setdefault((-1, 0, 3, 2, 5), []).append(self.__track_handler.enter_config)
+        # address_dict.setdefault((-1, -1, -1, 3, -1), []).append(self.__track_handler.change_instance)
+        # address_dict.setdefault((-1, 127, 127, 127, 127), []).append(self.__track_handler.exit_config)
 
-        # address_map = {
-        #     (-1, -1, 0, 0, 0): self.__track_handler.record_looper,
-        #     (-1, -1, 0, 1, 0): self.__track_handler.record_clip,
-        #     (-1, -1, 0, 2, 1): self.__track_handler.new_clip,
-        #     (-1, -1, 1, 1, 0): self.__track_handler.stop,
-        #     (-1, -1, 2, 1, 0): self.__track_handler.undo,
-        #     (-1, -1, 2, 2, 1): self.__track_handler.bank,
-        #     (-1, -1, 1, 2, 1): self.__track_handler.clear,
-        #     (-1, 0, 3, 1, 0): self.__track_handler.clear_all,
-        #     (-1, 2, 3, 1, 0): self.__track_handler.toggle_start_stop_all,
-        #     (-1, 1, 3, 0, 0): self.__track_handler.mute_all,
-        #     (-1, 1, 3, 1, -1): self.__track_handler.mute_all,
-        #     (-1, 0, 3, 2, 2): self.__track_handler.new_session,
-        #     (-1, 0, 3, 2, 1): self.__track_handler.exit_new_session,
-        #     (-1, 0, 3, 2, 5): self.__track_handler.enter_config,
-        #     (-1, -1, -1, 3, -1): self.__track_handler.change_instance,
-        #     (255, 255, 255, 255, 255): self.__track_handler.exit_config
-        #
-        # }
 
-        needle = ()
-        for keys in address_map.keys():
-            for idx, key in enumerate(keys):
+        address_map = [
+            ((-1, -1, 0, 0, 0), [self.__track_handler.record_looper]),
+            ((-1, -1, 0, 1, 0), [self.__track_handler.record_clip]),
+            ((-1, -1, 0, 2, 1), [self.__track_handler.new_clip]),
+            ((-1, -1, 1, 1, 0), [self.__track_handler.stop]),
+            ((-1, -1, 2, 1, 0), [self.__track_handler.undo]),
+            ((-1, -1, 2, 2, 1), [self.__track_handler.bank]),
+            ((-1, -1, 1, 2, 1), [self.__track_handler.clear]),
+            ((-1, 2, 3, 1, 0), [self.__track_handler.clear_all]),
+            ((-1, 0, 3, 1, 0), [self.__track_handler.toggle_start_stop_all]),
+            ((-1, 1, 3, 0, 0), [self.__track_handler.mute_all, self.__track_handler.tap_tempo]),
+            ((-1, 1, 3, 1, -1), [self.__track_handler.mute_all]),
+            ((-1, 0, 3, 2, 2), [self.__track_handler.new_session]),
+            ((-1, 2, 3, 0, 0), [self.__track_handler.exit_new_session]),
+            ((-1, 0, 3, 2, 5), [self.__track_handler.enter_config]),
+            ((-1, -1, -1, 3, -1), [self.__track_handler.change_instance]),
+            ((-1, 127, 127, 127, 127), [self.__track_handler.exit_config])
+
+        ]
+        methods_to_execute = []
+        for sysex, methods in address_map:
+            for idx, key in enumerate(sysex):
                 if key != -1 and key != data[idx]:
                     break
-                elif len(keys) - 1 == idx:
-                    needle = keys
-
-        # Get the function from switcher dictionary
-        for func in self.get_values_if_any(address_map, needle):
-            # Execute the function
-            if func is not None:
-                print func(instance, looper_num)
-
-    def get_values_if_any(self, d, key):
-        return d.get(key, [])
+                elif len(sysex) - 1 == idx:
+                    for method in methods:
+                        methods_to_execute.append(method)
+        for method in methods_to_execute:
+            method(instance, looper_num)
