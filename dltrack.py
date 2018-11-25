@@ -86,8 +86,8 @@ class DlTrack(Track):
                 self.request_control(STOP_CONTROL)
             else:
                 self.send_message("entering stop state")
-                self.state.value = STOP_STATE
                 self.updateState(STOP_STATE)
+                self.state.value = STOP_STATE
 
         # todo clean this up, follow tempo
         #self.device.parameters[TEMPO_CONTROL].value = NO_SONG_CONTROL
