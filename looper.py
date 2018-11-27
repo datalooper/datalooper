@@ -69,13 +69,12 @@ class looper(ControlSurface):
                         track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
                     track_nums.append(track_num)
                     self.__track_handler.append_tracks(track, track_num, key)
-                    # adds name change listener to all tracks
-                    if not track.name_has_listener(self.scan_tracks):
-                        track.add_name_listener(self.scan_tracks)
+            # adds name change listener to all tracks
+            if not track.name_has_listener(self.scan_tracks):
+                track.add_name_listener(self.scan_tracks)
         self.clear_unused_tracks(track_nums)
         # sets tracks that have more than 1 instance, so LED control can be efficiently checked later
         self.__track_handler.duplicates = set([x for x in track_nums if track_nums.count(x) > 1])
-
 
     def clear_unused_tracks(self, track_nums):
         # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
