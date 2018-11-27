@@ -5,9 +5,7 @@ from _Framework.InputControlElement import *
 from _Framework.EncoderElement import *
 from consts import *
 from trackhandler import TrackHandler
-from collections import defaultdict
-import math
-
+from config import address_map
 
 class looper(ControlSurface):
     # variables
@@ -15,6 +13,7 @@ class looper(ControlSurface):
     paramListeners = []
     param_values = []
     cur_beat = 0
+    config = []
 
     def __init__(self, c_instance):
         super(looper, self).__init__(c_instance)
@@ -160,7 +159,7 @@ class looper(ControlSurface):
         # [4] : control number
         # [5] : receiving (generic)
         # [6] : press/release/long press
-        # [7] : long press seconds
+        # [7] : long press seconds/num taps
 
         self.send_message("sysex received: " + str(midi_bytes))
         instance = midi_bytes[2]
@@ -171,25 +170,6 @@ class looper(ControlSurface):
 
         data = [instance, looper_num, control_num, action, long_press_seconds]
 
-        address_map = [
-            ((ANY_VALUE, ANY_VALUE, 0, PRESS, 0), [self.__track_handler.record_looper]),
-            ((ANY_VALUE, ANY_VALUE, 0, RELEASE, 0), [self.__track_handler.record_clip]),
-            ((ANY_VALUE, ANY_VALUE, 0, LONG_PRESS, 1), [self.__track_handler.new_clip]),
-            ((ANY_VALUE, ANY_VALUE, 1, RELEASE, 0), [self.__track_handler.stop]),
-            ((ANY_VALUE, ANY_VALUE, 2, RELEASE, 0), [self.__track_handler.undo, self.__track_handler.bank_if_clear]),
-            ((ANY_VALUE, ANY_VALUE, 2, LONG_PRESS, 1), [self.__track_handler.bank]),
-            ((ANY_VALUE, ANY_VALUE, 1, LONG_PRESS, 1), [self.__track_handler.clear]),
-            ((ANY_VALUE, 2, 3, PRESS, 0), [self.__track_handler.clear_all]),
-            ((ANY_VALUE, 0, 3, PRESS, 0), [self.__track_handler.toggle_start_stop_all]),
-            ((ANY_VALUE, 1, 3, PRESS, 0), [self.__track_handler.mute_all, self.__track_handler.tap_tempo]),
-            ((ANY_VALUE, 1, 3, RELEASE, ANY_VALUE), [self.__track_handler.mute_all]),
-            ((ANY_VALUE, 2, 3, LONG_PRESS, 2), [self.__track_handler.new_session]),
-            ((ANY_VALUE, 2, 3, PRESS, 0), [self.__track_handler.exit_new_session]),
-            ((ANY_VALUE, 2, 3, LONG_PRESS, 5), [self.__track_handler.enter_config]),
-            ((ANY_VALUE, ANY_VALUE, ANY_VALUE, 3, ANY_VALUE), [self.__track_handler.change_instance]),
-            ((ANY_VALUE, 127, 127, 127, 127), [self.__track_handler.exit_config])
-
-        ]
         methods_to_execute = []
         for sysex, methods in address_map:
             for idx, key in enumerate(sysex):
@@ -197,6 +177,6 @@ class looper(ControlSurface):
                     break
                 elif len(sysex) - 1 == idx:
                     for method in methods:
-                        methods_to_execute.append(method)
+                        methods_to_execute.append(getattr(self.__track_handler, method))
         for method in methods_to_execute:
             method(instance, looper_num)

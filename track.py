@@ -11,7 +11,10 @@ class Track(object):
         self.song = song
         self.req_record = 0
         self.artificial_arm = -1
-        self.orig_arm = self.track.arm
+        if self.track.can_be_armed:
+            self.orig_arm = self.track.arm
+        else:
+            self.orig_arm = 1
         self.new_session_mode = False
         self.lastState = CLEAR_STATE
 

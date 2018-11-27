@@ -68,7 +68,7 @@ class TrackHandler:
                 tracks.append(track)
         return tracks
 
-    def record(self, instance, looper_num, looper):
+    def record(self, instance = 0, looper_num = 0, looper = 0):
         req_track = instance * 3 + looper_num
         if self.stopAll:
             self.song.metronome = self.metro
@@ -79,25 +79,26 @@ class TrackHandler:
                     track.record(False)
         else:
             for track in self.tracks:
+                self.send_message(track)
                 if isinstance(track, looper) and track.trackNum == req_track:
                     track.record(True)
 
-    def stop(self, instance, looper_num):
+    def stop(self, instance=0, looper_num=0):
         self.send_message("stop")
         for track in self.get_track(instance, looper_num):
             track.stop(True)
 
-    def undo(self, instance, looper_num):
+    def undo(self, instance=0, looper_num=0):
         for track in self.get_track(instance, looper_num):
             track.undo()
         self.send_message("undo")
 
-    def clear(self, instance, looper_num):
+    def clear(self, instance=0, looper_num=0):
         for track in self.get_track(instance, looper_num):
             track.clear()
         self.send_message("clear")
 
-    def clear_all(self, instance, looper_num):
+    def clear_all(self, instance=0, looper_num=0):
         if not self.new_session_mode:
             if not self.check_uniform_state_cl([CLEAR_STATE]):
                 self.new_scene = True
@@ -110,7 +111,7 @@ class TrackHandler:
             self.new_scene = False
         self.send_message("clear all")
 
-    def toggle_start_stop_all(self, instance, looper_num):
+    def toggle_start_stop_all(self, instance=0, looper_num=0):
         if not self.new_session_mode and not self.check_uniform_state([CLEAR_STATE]):
             if self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
                 self.jump_to_next_bar(True)
@@ -141,7 +142,7 @@ class TrackHandler:
                 return False
         return True
 
-    def mute_all(self, instance, looper_num):
+    def mute_all(self, instance=0, looper_num=0):
         if not self.new_session_mode:
             for track in self.tracks:
                 if track.track.mute == 1:
@@ -150,12 +151,12 @@ class TrackHandler:
                     track.track.mute = 1
             self.send_message("mute all")
 
-    def new_session(self, instance, looper_num):
+    def new_session(self, instance=0, looper_num=0):
         self.send_message("New session")
         self.new_session_mode = not self.new_session_mode
         self.toggle_new_session()
 
-    def exit_new_session(self, instance, looper_num):
+    def exit_new_session(self, instance=0, looper_num=0):
         if self.new_session_mode:
             self.new_session_mode = False
             self.toggle_new_session()
@@ -180,15 +181,15 @@ class TrackHandler:
     def set_bpm(self, bpm):
         self.__parent.set_bpm(bpm)
 
-    def enter_config(self, instance, looper_num):
+    def enter_config(self, instance=0, looper_num=0):
         self.send_message("Config toggled")
         self.send_sysex(0, 5, 0)
 
-    def record_looper(self, instance, looper_num):
+    def record_looper(self, instance=0, looper_num=0):
         self.send_message("in record looper")
         self.record(instance, looper_num, DlTrack)
 
-    def record_clip(self, instance, looper_num):
+    def record_clip(self, instance=0, looper_num=0):
         self.send_message("in record clip")
         if not self.new_session_mode:
             self.record(instance, looper_num, ClTrack)
@@ -223,11 +224,11 @@ class TrackHandler:
             self.timer.stop()
             self.send_message("timer counter: " + str(self.timerCounter))
 
-    def exit_config(self, instance, looper_num):
+    def exit_config(self, instance=0, looper_num=0):
         self.send_message("exiting config")
         self.exit_new_session(instance, looper_num)
 
-    def change_instance(self, instance, looper_num):
+    def change_instance(self, instance=0, looper_num=0):
         self.send_message("changing instance to " + str(instance))
         i = 0
         while i < NUM_TRACKS:
@@ -243,16 +244,16 @@ class TrackHandler:
                 loop_track.track.arm = 1
             self.send_sysex(loop_track.trackNum, CHANGE_STATE_COMMAND, loop_track.lastState)
 
-    def bank(self, instance, looper_num):
+    def bank(self, instance=0, looper_num=0):
         self.__parent.send_program_change(looper_num)
 
-    def bank_if_clear(self, instance, looper_num):
+    def bank_if_clear(self, instance=0, looper_num=0):
         for track in self.get_track(instance, looper_num):
             if track.lastState != CLEAR_STATE:
                 return
         self.bank(instance, looper_num)
 
-    def new_clip(self, instance, looper_num):
+    def new_clip(self, instance=0, looper_num=0):
         for track in self.get_track(instance, looper_num):
             track.new_clip()
 
@@ -277,7 +278,7 @@ class TrackHandler:
             for track in self.tracks:
                 track.track.add_arm_listener(track.set_arm)
 
-    def tap_tempo(self, looper, instance):
+    def tap_tempo(self, looper=0, instance=0):
         if self.new_session_mode:
             self.song.tap_tempo()
             if self.taps >= 3:
