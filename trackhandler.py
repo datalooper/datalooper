@@ -30,6 +30,8 @@ class TrackHandler:
         self.__parent.disconnect()
 
     def clear_tracks(self):
+        for track in self.tracks:
+            track.remove_track()
         self.tracks = []
 
     def append_tracks(self, track, trackNum, track_key):
