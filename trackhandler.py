@@ -246,6 +246,12 @@ class TrackHandler:
     def bank(self, instance, looper_num):
         self.__parent.send_program_change(looper_num)
 
+    def bank_if_clear(self, instance, looper_num):
+        for track in self.get_track(instance, looper_num):
+            if track.lastState != CLEAR_STATE:
+                return
+        self.bank(instance, looper_num)
+
     def new_clip(self, instance, looper_num):
         for track in self.get_track(instance, looper_num):
             track.new_clip()

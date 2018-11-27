@@ -52,4 +52,5 @@ class Track(object):
         self.send_message("updating state: " + str(state))
         self.lastState = state
         if self.trackNum not in self.__parent.duplicates or (self.trackNum in self.__parent.duplicates and "LED" in self.track.name):
+            self.send_message("really updating state")
             self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)

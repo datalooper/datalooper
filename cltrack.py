@@ -95,7 +95,7 @@ class ClTrack(Track):
         return self.check_clip_state(self.clipSlot)
 
     def check_clip_state(self, clip_slot):
-        if clip_slot.has_clip and clip_slot != -1:
+        if clip_slot != -1 and clip_slot.has_clip:
             if clip_slot.clip.is_recording:
                 return RECORDING_STATE
             elif clip_slot.clip.is_playing and not clip_slot.clip.is_recording:
