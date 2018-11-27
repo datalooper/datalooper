@@ -20,7 +20,10 @@ class DlTrack(Track):
         self.quantization = -1
         self.req_bpm = False
         self.updateState(self.lastState)
-        self.track.add_arm_listener(self.set_arm)
+
+        if self.track.can_be_armed:
+            self.track.add_arm_listener(self.set_arm)
+
         if not self.state.value_has_listener(self._on_looper_param_changed):
             self.state.add_value_listener(self._on_looper_param_changed)
 

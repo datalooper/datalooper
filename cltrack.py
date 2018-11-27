@@ -11,7 +11,8 @@ class ClTrack(Track):
         self.clipSlot = -1
         self.lastClip = -1
         self.clipStopping = False
-        self.track.add_arm_listener(self.set_arm)
+        if self.track.can_be_armed:
+            self.track.add_arm_listener(self.set_arm)
         self.ignoreState = False
         if not track.fired_slot_index_has_listener(self.on_slot_fired):
             track.add_fired_slot_index_listener(self.on_slot_fired)
