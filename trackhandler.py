@@ -81,7 +81,6 @@ class TrackHandler:
                     track.record(False)
         else:
             for track in self.tracks:
-                self.send_message(track)
                 if isinstance(track, looper) and track.trackNum == req_track:
                     track.record(True)
 
@@ -154,7 +153,6 @@ class TrackHandler:
             self.send_message("mute all")
 
     def new_session(self, instance=0, looper_num=0):
-        self.send_message("New session")
         self.new_session_mode = not self.new_session_mode
         self.toggle_new_session()
 
@@ -166,12 +164,14 @@ class TrackHandler:
     def toggle_new_session(self):
         self.stopAll = False
         if self.new_session_mode:
+            self.send_message("New session")
             self.send_sysex(0, 4, 1)
-            if self.metro  == -1:
+            if self.metro == -1:
                 self.metro = self.song.metronome
             self.song.metronome = 0
             self.taps = 0
         else:
+            self.send_message("exiting new session mode")
             self.send_sysex(0, 4, 0)
             self.song.metronome = self.metro
         for track in self.tracks:

@@ -148,6 +148,7 @@ class DlTrack(Track):
             self.__parent.jump_to_next_bar(True)
             self.__parent.new_session(0,0)
             self.req_bpm = False
+
     def removeTrack(self):
         if self.state.value_has_listener(self._on_looper_param_changed):
             self.state.remove_value_listener(self._on_looper_param_changed)
