@@ -63,7 +63,7 @@ class ClMidiTrack(cltrack.ClTrack):
         self.song.session_record = 1
 
     def undoOverdub(self):
-        if len(self.prevNotes) > 0:
+        if len(self.prevNotes) > 0 and self.clipSlot != -1 and self.clipSlot.has_clip:
             self.__parent.send_message("removing overdub")
             self.clipSlot.clip.select_all_notes()
             self.clipSlot.clip.replace_selected_notes(self.prevNotes[-1])

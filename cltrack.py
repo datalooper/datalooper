@@ -1,6 +1,6 @@
 from consts import *
 from track import Track
-
+import Live
 
 class ClTrack(Track):
     """ Class handling clip triggering from DataLooper """
@@ -11,6 +11,7 @@ class ClTrack(Track):
         self.clipSlot = -1
         self.lastClip = -1
         self.clipStopping = False
+        self.outOfScenes = False
         if self.track.can_be_armed:
             self.track.add_arm_listener(self.set_arm)
         self.ignoreState = False
@@ -128,10 +129,14 @@ class ClTrack(Track):
         if not self.track.clip_slots[last_slot].has_clip and not self.__parent.new_scene:
             self.clipSlot = self.track.clip_slots[last_slot]
         else:
-            self.clipSlot = self.track.clip_slots[last_slot + 1]
+            if last_slot + 1 >= len(self.track.clip_slots):
+                self.outOfScenes = True
+                self.__parent.create_scene()
+            else:
+                self.send_message("last slot: " + str(last_slot) + " len clipslots: " + str(len(self.track.clip_slots)))
+                self.clipSlot = self.track.clip_slots[last_slot + 1]
 
-
-        if not self.clipSlot.has_clip_has_listener(self.on_clip_change):
+        if self.clipSlot != -1 and not self.clipSlot.has_clip_has_listener(self.on_clip_change):
             self.clipSlot.add_has_clip_listener(self.on_clip_change)
         self.updateState(CLEAR_STATE)
 
@@ -142,6 +147,7 @@ class ClTrack(Track):
         #             self.clipSlot.add_has_clip_listener(self.on_clip_change)
         #         self.updateState(CLEAR_STATE)
         #         return
+
 
     def checkActiveClip(self):
         self.clipSlot = -1

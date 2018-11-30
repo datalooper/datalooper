@@ -6,7 +6,7 @@ from consts import *
 from datalooper.cltrack import ClTrack
 from dltrack import DlTrack
 import Live
-
+from track import Track
 
 class TrackHandler:
     """ Class handling looper & clip tracks """
@@ -23,8 +23,10 @@ class TrackHandler:
         self.stopAll = False
         self.bpm = self.song.tempo
         self.timerCounter = 0
+        self.createSceneStarted = False
         self.duplicates = []
         self.timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
+        self.createScene = Live.Base.Timer(callback=self.create_scene_callback, interval=1, repeat=False)
 
     def disconnect(self):
         self.__parent.disconnect()
@@ -70,7 +72,7 @@ class TrackHandler:
                 tracks.append(track)
         return tracks
 
-    def record(self, instance = 0, looper_num = 0, looper = 0):
+    def record(self, instance = 0, looper_num = 0, looper = Track):
         req_track = instance * 3 + looper_num
         if self.stopAll:
             self.song.metronome = self.metro
@@ -262,7 +264,8 @@ class TrackHandler:
     def session_record(self, overdubbing, curTrack):
         if overdubbing:
             for track in self.tracks:
-                track.track.remove_arm_listener(track.set_arm)
+                if track.track.can_be_armed and track.track.arm_has_listener(track.set_arm):
+                    track.track.remove_arm_listener(track.set_arm)
             for track in self.song.tracks:
                 if track.name != curTrack.name and track.can_be_armed:
                     self.trackStore.append(TempTrack(track.name, track.arm, track.current_monitoring_state))
@@ -286,6 +289,22 @@ class TrackHandler:
             if self.taps >= 3:
                 self.song.metronome = self.metro
             self.taps += 1
+
+    def create_scene(self):
+        if not self.createSceneStarted:
+            self.createSceneStarted = True
+            self.createScene.start()
+
+    def create_scene_callback(self):
+        self.song.create_scene(-1)
+        self.createSceneStarted = False
+        for track in self.tracks:
+            if isinstance(track, ClTrack) and track.outOfScenes:
+                track.outOfScenes = False
+                self.new_scene = True
+                track.getNewClipSlot()
+        self.new_scene = False
+
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):

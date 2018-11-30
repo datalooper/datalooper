@@ -58,5 +58,5 @@ class Track(object):
             self.send_message("really updating state")
             self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
 
-    def removeTrack(self):
+    def remove_track(self):
         pass
