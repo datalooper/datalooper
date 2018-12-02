@@ -23,6 +23,7 @@ class TrackHandler:
         self.new_scene = False
         self.stopAll = False
         self.bpm = self.song.tempo
+        self.muted_tracks = []
 
         # ensures timer never gets called more than 50 times
         self.timerCounter = 0
@@ -303,6 +304,45 @@ class TrackHandler:
                 track.getNewClipSlot()
         self.new_scene = False
 
+    def delete_all(self, looper, instance):
+        for track in self.tracks:
+            if isinstance(track, ClTrack):
+                track.delete_all()
+
+    def mute_all_playing_clips(self, looper, instance):
+        self.send_message("muting all clips, length: " + str(len(self.muted_tracks)))
+        if len(self.muted_tracks) == 0:
+            for track in self.song.tracks:
+                if track.playing_slot_index != -1:
+                    self.muted_tracks.append(track)
+                    track.mute = 1
+        else:
+            for track in self.muted_tracks:
+                track.mute = 0
+            self.muted_tracks = []
+
+    def mute_bank(self, looper, instance):
+        for loop_track in self.tracks:
+            if instance * 3 <= loop_track.trackNum < instance * 3 + NUM_TRACKS:
+                if loop_track.track.mute == 1:
+                    loop_track.track.mute = 0
+                else:
+                    loop_track.track.mute = 1
+
+    def mute_track(self, looper, instance):
+        for track in self.get_track(instance, looper):
+            if track.track.mute == 1:
+                track.track.mute = 0
+            elif track.lastState != CLEAR_STATE:
+                track.track.mute = 1
+
+    def stop_all_playing_clips(self, looper, instance):
+        self.song.stop_all_clips()
+
+    def turn_off_metronome(self, looper, instance):
+        if self.metro != -1:
+            self.metro = self.song.metronome
+        self.song.metronome = 0
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):

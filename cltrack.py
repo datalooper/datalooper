@@ -179,3 +179,8 @@ class ClTrack(Track):
     def updateState(self, state):
         self.__parent.send_message("updating state: " + str(state) + " Tracknum: " + str(self.trackNum))
         super(ClTrack, self).updateState(state)
+
+    def delete_all(self):
+        for clip_slot in self.track.clip_slots:
+            self.clipSlot = clip_slot
+            self.removeClip()
