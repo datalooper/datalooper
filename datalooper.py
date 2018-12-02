@@ -7,17 +7,15 @@ from consts import *
 from trackhandler import TrackHandler
 from config import address_map
 
-class looper(ControlSurface):
+
+class DataLooper(ControlSurface):
     # variables
-    looperParams = []
-    paramListeners = []
-    param_values = []
     cur_beat = 0
-    config = []
 
     def __init__(self, c_instance):
-        super(looper, self).__init__(c_instance)
+        super(DataLooper, self).__init__(c_instance)
         self.__c_instance = c_instance
+
         # shows in Ableton footer
         self.show_message("Powered by DATA Looper")
 
@@ -36,23 +34,19 @@ class looper(ControlSurface):
         # initializes base obj
         self.live = Live.Application.get_application()
 
-        self.song().add_session_record_status_listener(self.session_status)
-
     def refresh_state(self):
         self.log_message("refreshing state")
 
-    def session_status(self):
-        self.log_message(str(self.song().session_record_status))
-
     # Detects tracks with 'looper' in the title and listens for param changes
     def scan_tracks(self):
-        self.log_message("scanning looper tracks")
+        self.log_message("scanning for DataLooper tracks")
         # get all tracks
         tracks = self.song().tracks
 
         # clear CL# identified tracks
         self.__track_handler.clear_tracks()
         track_nums = []
+
         # iterate through all tracks
         for track in tracks:
             # check for tracks with naming convention
@@ -62,10 +56,8 @@ class looper(ControlSurface):
                 if string_pos != -1:
                     # Checks for double digits
                     if len(track.name) >= string_pos + 5 and track.name[string_pos + 4: string_pos + 5].isdigit():
-                        # 0 indexed
                         track_num = int(track.name[string_pos + 3: string_pos + 5]) - 1
                     else:
-                        # 0 indexed
                         track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
                     track_nums.append(track_num)
                     self.__track_handler.append_tracks(track, track_num, key)
@@ -104,7 +96,7 @@ class looper(ControlSurface):
         self.log_message("looper disconnecting")
         looper_status_sysex = (240, 1, 2, 3, 0, 4, 0, 247)
         self.send_midi(looper_status_sysex)
-        super(looper, self).disconnect()
+        super(DataLooper, self).disconnect()
 
     def send_midi(self, midi_event_bytes):
         self.__c_instance.send_midi(midi_event_bytes)
@@ -123,9 +115,9 @@ class looper(ControlSurface):
         """MIDI messages are only received through this function, when explicitly
         forwarded in 'build_midi_map'.
         """
-        if (((midi_bytes[0] & 240) == NOTE_ON_STATUS)):
+        if (midi_bytes[0] & 240) == NOTE_ON_STATUS:
             self.receive_midi_notes(midi_bytes)
-        elif (((midi_bytes[0] & 240) == CC_STATUS)):
+        elif (midi_bytes[0] & 240) == CC_STATUS:
             self.receive_midi_cc(midi_bytes)
         elif len(midi_bytes) != 3:
             self.handle_sysex(midi_bytes)
@@ -144,10 +136,10 @@ class looper(ControlSurface):
             Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
 
     def receive_midi_notes(self, midi_bytes):
-        note_num = midi_bytes[1]
+        pass
 
     def receive_midi_cc(self, midi_bytes):
-        cc_num = midi_bytes[1]
+        pass
 
     def handle_sysex(self, midi_bytes):
         # ex: [0xF0, 0x41, looper instance, looper number, control number, 0x12, press/release/long press, long press seconds]

@@ -10,7 +10,7 @@ address_map = [
     ((-1, 0, 3, 0, 0), ["toggle_start_stop_all"]),
     ((-1, 1, 3, 0, 0), ["mute_all", "tap_tempo"]),
     ((-1, 1, 3, 1, -1), ["mute_all"]),
-    ((-1, 2, 3, 2, 2), ["new_session"]),
+    ((-1, 2, 3, 2, 2), ["enter_new_session"]),
     ((-1, 2, 3, 0, 0), ["exit_new_session"]),
     ((-1, 2, 3, 2, 5), ["enter_config"]),
     ((-1, -1, -1, 3, -1), ["change_instance"]),

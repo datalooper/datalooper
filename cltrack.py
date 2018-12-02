@@ -2,6 +2,7 @@ from consts import *
 from track import Track
 import Live
 
+
 class ClTrack(Track):
     """ Class handling clip triggering from DataLooper """
 
@@ -12,8 +13,6 @@ class ClTrack(Track):
         self.lastClip = -1
         self.clipStopping = False
         self.outOfScenes = False
-        if self.track.can_be_armed:
-            self.track.add_arm_listener(self.set_arm)
         self.ignoreState = False
         if not track.fired_slot_index_has_listener(self.on_slot_fired):
             track.add_fired_slot_index_listener(self.on_slot_fired)
@@ -32,10 +31,6 @@ class ClTrack(Track):
             self.send_message("value error")
             last_slot = 0
         return last_slot
-
-    def set_arm(self):
-        if self.track.arm:
-            self.updateState(self.check_clip_slot_state())
 
     def on_slot_fired(self):
         self.send_message("On slot fired: " + str(self.trackNum))
@@ -147,7 +142,6 @@ class ClTrack(Track):
         #             self.clipSlot.add_has_clip_listener(self.on_clip_change)
         #         self.updateState(CLEAR_STATE)
         #         return
-
 
     def checkActiveClip(self):
         self.clipSlot = -1

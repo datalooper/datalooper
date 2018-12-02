@@ -7,7 +7,6 @@ class ClMidiTrack(cltrack.ClTrack):
     def __init__(self, parent, track, trackNum, song):
         super(ClMidiTrack, self).__init__(parent, track, trackNum, song)
         self.__parent = parent
-        self.song = song
         self.trackStore = []
         self.prevNotes = list()
 

@@ -30,6 +30,3 @@ class ClAudioTrack(cltrack.ClTrack):
 
     def undo(self):
         self.getNewClipSlot()
-
-    def removeTrack(self):
-        pass
