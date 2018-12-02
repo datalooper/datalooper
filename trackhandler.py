@@ -3,7 +3,7 @@ from _Generic.Devices import *
 from claudiotrack import ClAudioTrack
 from clmiditrack import ClMidiTrack
 from consts import *
-from datalooper.cltrack import ClTrack
+from cltrack import ClTrack
 from dltrack import DlTrack
 import Live
 from track import Track

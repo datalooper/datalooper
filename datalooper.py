@@ -129,11 +129,12 @@ class DataLooper(ControlSurface):
 		Which means that when you are not forwarding MIDI, nor mapping parameters, you will
 		never get any MIDI messages at all.
 		"""
-        script_handle = self.__c_instance.handle()
-        # self.log_message("building map")
-        for i in range(128):
-            Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
-            Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
+        #script_handle = self.__c_instance.handle()
+        # # self.log_message("building map")
+        # for i in range(128):
+        #     Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
+        #     Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
+        pass
 
     def receive_midi_notes(self, midi_bytes):
         pass
