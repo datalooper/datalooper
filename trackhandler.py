@@ -98,7 +98,8 @@ class TrackHandler:
 
     def undo(self, instance=0, looper_num=0):
         for track in self.get_track(instance, looper_num):
-            track.undo()
+            if track.lastState != CLEAR_STATE:
+                track.undo()
         self.send_message("undo")
 
     def clear(self, instance=0, looper_num=0):
@@ -107,9 +108,9 @@ class TrackHandler:
         self.send_message("clear")
 
     def clear_all(self, instance=0, looper_num=0):
-        self.send_message("clearing all")
-        if not self.new_session_mode and not self.check_uniform_state([CLEAR_STATE]):
-            self.new_scene = True
+        if not self.new_session_mode:
+            if not self.check_uniform_state_cl([CLEAR_STATE]):
+                self.new_scene = True
             for track in self.tracks:
                 if isinstance(track, ClTrack):
                     track.getNewClipSlot()
@@ -117,6 +118,14 @@ class TrackHandler:
                 else:
                     track.clear()
             self.new_scene = False
+        self.send_message("clear all")
+
+    def check_uniform_state_cl(self, state):
+        for track in self.tracks:
+            self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
+            if isinstance(track, ClTrack) and track.lastState not in state:
+                return False
+        return True
 
     def toggle_start_stop_all(self, instance=0, looper_num=0):
         if not self.new_session_mode and not self.check_uniform_state([CLEAR_STATE]):
@@ -343,6 +352,10 @@ class TrackHandler:
         if self.metro != -1:
             self.metro = self.song.metronome
         self.song.metronome = 0
+
+    def new_clip(self, instance=0, looper_num=0):
+        for track in self.get_track(instance, looper_num):
+            track.new_clip()
 
 class TempTrack(object):
     def __init__(self, name, arm, current_monitoring_state):

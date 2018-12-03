@@ -140,7 +140,7 @@ class DlTrack(Track):
             self.updateState(PLAYING_STATE)
             self.state.value = PLAYING_STATE
             self.__parent.jump_to_next_bar(True)
-            self.__parent.enter_new_session(0, 0)
+            self.__parent.exit_new_session(0, 0)
             self.req_bpm = False
 
     def remove_track(self):
