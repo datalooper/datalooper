@@ -291,7 +291,7 @@ class TrackHandler:
                         track.current_monitoring_state = match.current_monitoring_state
                         track.arm = match.arm
 
-    def tap_tempo(self, looper=0, instance=0):
+    def tap_tempo(self, instance=0, looper=0):
         if self.new_session_mode:
             self.song.tap_tempo()
             if self.tap_tempo_counter >= 3:
@@ -313,12 +313,12 @@ class TrackHandler:
                 track.getNewClipSlot()
         self.new_scene = False
 
-    def delete_all(self, looper, instance):
+    def delete_all(self, instance, looper):
         for track in self.tracks:
             if isinstance(track, ClTrack):
                 track.delete_all()
 
-    def mute_all_playing_clips(self, looper, instance):
+    def mute_all_playing_clips(self, instance, looper):
         self.send_message("muting all clips, length: " + str(len(self.muted_tracks)))
         if len(self.muted_tracks) == 0:
             for track in self.song.tracks:
@@ -330,7 +330,8 @@ class TrackHandler:
                 track.mute = 0
             self.muted_tracks = []
 
-    def mute_bank(self, looper, instance):
+    def mute_bank(self, instance, looper):
+        self.send_message("mute bank instance: " + str(instance))
         for loop_track in self.tracks:
             if instance * 3 <= loop_track.trackNum < instance * 3 + NUM_TRACKS:
                 if loop_track.track.mute == 1:
@@ -338,17 +339,17 @@ class TrackHandler:
                 else:
                     loop_track.track.mute = 1
 
-    def mute_track(self, looper, instance):
+    def mute_track(self, instance, looper):
         for track in self.get_track(instance, looper):
             if track.track.mute == 1:
                 track.track.mute = 0
             elif track.lastState != CLEAR_STATE:
                 track.track.mute = 1
 
-    def stop_all_playing_clips(self, looper, instance):
+    def stop_all_playing_clips(self, instance, looper):
         self.song.stop_all_clips()
 
-    def turn_off_metronome(self, looper, instance):
+    def turn_off_metronome(self, instance, looper):
         if self.metro != -1:
             self.metro = self.song.metronome
         self.song.metronome = 0
