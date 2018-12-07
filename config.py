@@ -24,7 +24,7 @@ address_map = [
     ((-1, 0, 3, 0, 0), ["toggle_start_stop_all"]),
 
     # move this to teensy, config should be hardwired
-    ((-1, 1, 3, 2, 10), ["enter_config"]),
+    ((-1, 1, 3, 2, 20), ["enter_config"]),
     ((-1, -1, -1, 3, -1), ["change_instance"]),
     ((-1, 127, 127, 127, 127), ["exit_config"])
 ]
