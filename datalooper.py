@@ -1,12 +1,10 @@
 from __future__ import with_statement
 import Live
 from _Framework.ControlSurface import ControlSurface
-from _Framework.InputControlElement import *
-from _Framework.EncoderElement import *
 from consts import *
 from trackhandler import TrackHandler
-from config import address_map
-
+from sysex import Sysex
+from actions import Actions
 
 class DataLooper(ControlSurface):
     # variables
@@ -28,53 +26,14 @@ class DataLooper(ControlSurface):
         # creates obj to handle tracks
         self.__track_handler = TrackHandler(self, self.song())
 
-        # looks for key'd tracks
-        self.scan_tracks()
+        # creates obj to handle actions
+        self.__action_handler = Actions(self, self.__track_handler.scan_tracks(), self.song())
 
         # initializes base obj
         self.live = Live.Application.get_application()
 
     def refresh_state(self):
         self.log_message("refreshing state")
-
-    # Detects tracks with 'looper' in the title and listens for param changes
-    def scan_tracks(self):
-        self.log_message("scanning for DataLooper tracks")
-        # get all tracks
-        tracks = self.song().tracks
-
-        # clear CL# identified tracks
-        self.__track_handler.clear_tracks()
-        track_nums = []
-
-        # iterate through all tracks
-        for track in tracks:
-            # check for tracks with naming convention
-            for key in TRACK_KEYS:
-                # checks if key exists in name
-                string_pos = track.name.find(key)
-                if string_pos != -1:
-                    # Checks for double digits
-                    if len(track.name) >= string_pos + 5 and track.name[string_pos + 4: string_pos + 5].isdigit():
-                        track_num = int(track.name[string_pos + 3: string_pos + 5]) - 1
-                    else:
-                        track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
-                    track_nums.append(track_num)
-                    self.__track_handler.append_tracks(track, track_num, key)
-            # adds name change listener to all tracks
-            if not track.name_has_listener(self.scan_tracks):
-                track.add_name_listener(self.scan_tracks)
-        self.clear_unused_tracks(track_nums)
-        # sets tracks that have more than 1 instance, so LED control can be efficiently checked later
-        self.__track_handler.duplicates = set([x for x in track_nums if track_nums.count(x) > 1])
-
-    def clear_unused_tracks(self, track_nums):
-        # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
-        i = 0
-        while i < NUM_TRACKS:
-            if i not in track_nums:
-                self.send_sysex(i, CHANGE_STATE_COMMAND, CLEAR_STATE)
-            i += 1
 
     def send_message(self, m):
         self.log_message(m)
@@ -83,7 +42,7 @@ class DataLooper(ControlSurface):
         self.song().tempo = bpm
 
     def on_track_change(self):
-        self.scan_tracks()
+        self.__action_handler.update_tracks(self.__track_handler.scan_tracks())
 
     def on_time_change(self):
         time = self.song().get_current_beats_song_time()
@@ -112,63 +71,58 @@ class DataLooper(ControlSurface):
         self.send_midi(looper_status_sysex)
 
     def receive_midi(self, midi_bytes):
-        """MIDI messages are only received through this function, when explicitly
-        forwarded in 'build_midi_map'.
-        """
-        if (midi_bytes[0] & 240) == NOTE_ON_STATUS:
-            self.receive_midi_notes(midi_bytes)
-        elif (midi_bytes[0] & 240) == CC_STATUS:
-            self.receive_midi_cc(midi_bytes)
-        elif len(midi_bytes) != 3:
+        if len(midi_bytes) != 3:
             self.handle_sysex(midi_bytes)
 
-    def build_midi_map(self, midi_map_handle):
-        """Live -> Script
-		Build DeviceParameter Mappings, that are processed in Audio time, or
-		forward MIDI messages explicitly to our receive_midi_functions.
-		Which means that when you are not forwarding MIDI, nor mapping parameters, you will
-		never get any MIDI messages at all.
-		"""
-        #script_handle = self.__c_instance.handle()
-        # # self.log_message("building map")
-        # for i in range(128):
-        #     Live.MidiMap.forward_midi_note(script_handle, midi_map_handle, CHANNEL, i)
-        #     Live.MidiMap.forward_midi_cc(script_handle, midi_map_handle, CHANNEL, i)
-        pass
-
-    def receive_midi_notes(self, midi_bytes):
-        pass
-
-    def receive_midi_cc(self, midi_bytes):
-        pass
-
     def handle_sysex(self, midi_bytes):
-        # ex: [0xF0, 0x41, looper instance, looper number, control number, 0x12, press/release/long press, long press seconds]
+        # {0xF0, 0x41, (byte) *instance, (byte) *bank, (byte) looperNum, (byte) mode, (byte) action, (byte) data1, (byte) data2, sending,  0xF7}
         # [0] : generic
         # [1] : generic
         # [2] : looper instance
-        # [3] : looper number
-        # [4] : control number
-        # [5] : receiving (generic)
-        # [6] : press/release/long press
-        # [7] : long press seconds/num taps
+        # [3] : looper bank
+        # [4] : looper number
+        # [5] : mode
+        # [6] : action
+        # [7] : data1
+        # [8] : data2
+        # [9] : sending
+        # [10] : generic
 
-        self.send_message("sysex received: " + str(midi_bytes))
-        instance = midi_bytes[2]
-        looper_num = midi_bytes[3]
-        control_num = midi_bytes[4]
-        action = midi_bytes[6]
-        long_press_seconds = midi_bytes[7]
+        sysex = Sysex(midi_bytes)
+        self.send_message(self.get_method(sysex.action))
+        getattr(self.__track_handler, self.get_method(sysex.action))(sysex)
 
-        data = [instance, looper_num, control_num, action, long_press_seconds]
-
-        methods_to_execute = []
-        for sysex, methods in address_map:
-            for idx, key in enumerate(sysex):
-                if key != -1 and key != data[idx]:
-                    break
-                elif len(sysex) - 1 == idx:
-                    for method in methods:
-                        methods_to_execute.append(getattr(self.__track_handler, method))
-        for method in methods_to_execute:
-            method(instance, looper_num)
+    @staticmethod
+    def get_method(argument):
+        action_map = {
+            0: "record",
+            1: "stop",
+            2: "undo",
+            3: "clear",
+            4: "mute_track",
+            5: "new_clip",
+            6: "bank",
+            7: "change_instance",
+            8: "record_bank",
+            9: "stop_bank",
+            10: "undo_bank",
+            11: "clear_bank",
+            12: "start_bank",
+            13: "mute_bank",
+            14: "record_all",
+            15: "stop_all",
+            16: "undo_all",
+            17: "clear_all",
+            18: "start_all",
+            19: "mute_all",
+            20: "toggle_stop_start",
+            21: "stop_all_playing_clips",
+            22: "mute_all_tracks_playing_clips",
+            23: "create_scene",
+            24: "metronome_control",
+            25: "tap_tempo",
+            26: "jump_to_next_bar",
+            27: "change_mode",
+            28: "new_clips_on_all"
+        }
+        return action_map.get(argument, "Invalid Action")
