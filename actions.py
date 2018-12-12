@@ -41,6 +41,7 @@ class Actions:
         self.tracks = tracks
         self.state = State(song)
         self.song = song
+        self.__parent = parent
 
     ##### HELPER FUNCTIONS #####
 
@@ -54,36 +55,52 @@ class Actions:
         return types.get(type)
 
     def update_tracks(self, tracks):
+        # self.__parent.send_message("updating tracks")
         self.tracks = tracks
 
     @staticmethod
     def get_track_num(data):
-        return data.instance * NUM_TRACKS + data.looper_num
+        return data.instance * (NUM_TRACKS * NUM_BANKS) + (data.bank * NUM_TRACKS) + data.looper_num
 
     def get_track_num_str(self, data):
         return str(self.get_track_num(data))
 
     def call_method_on_tracks(self, data, track_type, method_name, *args):
         if data.mode == self.state.mode:
-            for track in self.tracks[self.get_track_num_str(data)]:
-                if isinstance(track, self.get_looper_type(track_type)):
-                    getattr(track, method_name)(*args)
+            self.__parent.send_message("track num: " + self.get_track_num_str(data))
+            tracks = self.tracks.get(self.get_track_num_str(data))
+            self.__parent.send_message(str(tracks))
+            if tracks is not None:
+                for track in tracks:
+                    if isinstance(track, self.get_looper_type(track_type)):
+                        getattr(track, method_name)(*args)
 
     def call_method_on_bank(self, data, track_type, method_name, *args):
         if data.mode == self.state.mode:
             x = 0
             while x < 3:
-                for track in self.tracks[str(data.instance * NUM_TRACKS + x)]:
-                    if isinstance(track, self.get_looper_type(track_type)):
-                        getattr(track, method_name)(*args)
+                tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (data.bank * NUM_TRACKS) + x))
+                if tracks is not None:
+                    for track in tracks:
+                        if isinstance(track, self.get_looper_type(track_type)):
+                            getattr(track, method_name)(*args)
                 x += 1
 
     def call_method_on_all_tracks(self, data, track_type, method_name, *args):
         if data.mode == self.state.mode:
-            for tracks in self.tracks:
+            for tracks in self.tracks.values():
                 for track in tracks:
+                    self.__parent.send_message("track name: " + str(track.trackNum))
                     if isinstance(track, self.get_looper_type(track_type)):
                         getattr(track, method_name)(*args)
+
+    def check_uniform_state(self, state):
+        for tracks in self.tracks.values():
+            for track in tracks:
+                # self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
+                if track.lastState not in state:
+                    return False
+        return True
 
     ##### TRACK ACTIONS #####
 
@@ -100,13 +117,13 @@ class Actions:
         self.call_method_on_tracks(data, data.data1, "record", data.data2)
 
     def stop(self, data):
-        self.call_method_on_tracks(data, data.data1, "stop")
+        self.call_method_on_tracks(data, data.data1, "stop", data.data2)
 
     def undo(self, data):
         self.call_method_on_tracks(data, data.data1, "undo")
 
     def clear(self, data):
-        self.call_method_on_tracks(data, data.data1, "clear")
+        self.call_method_on_tracks(data, data.data1, "clear", data.data2)
 
     def mute(self, data):
         self.call_method_on_tracks(data, data.data1, "mute", data.data2)
@@ -117,7 +134,7 @@ class Actions:
     ##### BANKING ACTIONS #####
 
     def bank(self, data):
-        pass
+        self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
 
     def change_instance(self, data):
         pass
@@ -148,13 +165,13 @@ class Actions:
         self.call_method_on_all_tracks(data, data.data1, "record")
 
     def stop_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "stop")
+        self.call_method_on_all_tracks(data, data.data1, "stop", data.data2)
 
     def undo_all(self, data):
         self.call_method_on_all_tracks(data, data.data1, "undo")
 
     def clear_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "clear")
+        self.call_method_on_all_tracks(data, data.data1, "clear", data.data2)
 
     def start_all(self, data):
         self.call_method_on_all_tracks(data, data.data1, "start", data.data2)
@@ -163,7 +180,12 @@ class Actions:
         self.call_method_on_all_tracks(data, data.data1, "mute", data.data2)
 
     def toggle_stop_start(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "toggle_stop_start", data.data2)
+        if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
+            self.call_method_on_all_tracks(data, data.data1, "start", data.data2)
+            if data.data2 == 0:
+                self.jump_to_next_bar()
+        else:
+            self.call_method_on_all_tracks(data, data.data1, "stop", data.data2)
 
     def new_clips_on_all(self, data):
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
@@ -207,8 +229,17 @@ class Actions:
     def tap_tempo(self, data):
         pass
 
-    def jump_to_next_bar(self, data):
-        pass
+    def jump_to_next_bar(self):
+        self.state.was_recording = self.song.record_mode
+        time = int(self.song.current_song_time) + (self.song.signature_denominator - (
+                int(self.song.current_song_time) % self.song.signature_denominator))
+        self.state.bpm = self.song.tempo
+        self.song.current_song_time = time
+        self.song.record_mode = self.state.was_recording
+        # if changeBPM:
+        #     self.timerCounter = 0
+        #     self.tempo_change_timer.start()
 
     def change_mode(self, data):
-        pass
+        self.state.mode = data.data1
+        self.call_method_on_all_tracks(data, BOTH_TRACK_TYPES, "change_mode", data.data1)

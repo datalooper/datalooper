@@ -51,7 +51,7 @@ def clear_all(self, data):
             self.new_scene = True
         for track in self.tracks:
             if isinstance(track, ClTrack):
-                track.getNewClipSlot()
+                track.get_new_clip_slot()
                 track.stop(False)
             else:
                 track.clear()
@@ -148,12 +148,7 @@ def record_clip(self, data):
     if not self.new_session_mode:
         self.record(data, ClTrack)
 
-def find_last_slot(self):
-    index = []
-    for cl_track in self.tracks:
-        if isinstance(cl_track, ClTrack):
-            index.append(cl_track.find_last_slot())
-    return max(index)
+
 
 def jump_to_next_bar(self, changeBPM):
     rec_flag = self.song.record_mode
@@ -212,22 +207,6 @@ def bank_if_clear(self, data):
             return
     self.bank(data.data)
 
-def session_record(self, overdubbing, curTrack):
-    if overdubbing:
-        for track in self.song.tracks:
-            if track.name != curTrack.name and track.can_be_armed:
-                self.trackStore.append(TempTrack(track.name, track.arm, track.current_monitoring_state))
-                if track.arm == 1:
-                    track.arm = 0
-                    if track.current_monitoring_state == 1 and track.playing_slot_index == -1:
-                        track.current_monitoring_state = 0
-    else:
-        for track in self.song.tracks:
-            if track.name != curTrack.name and track.can_be_armed:
-                match = next((trackS for trackS in self.trackStore if track.name == trackS.name), None)
-                if match is not None:
-                    track.current_monitoring_state = match.current_monitoring_state
-                    track.arm = match.arm
 
 def tap_tempo(self, data):
     if self.new_session_mode:
@@ -236,20 +215,7 @@ def tap_tempo(self, data):
             self.song.metronome = self.metro
         self.tap_tempo_counter += 1
 
-def create_scene(self):
-    if not self.createSceneStarted:
-        self.createSceneStarted = True
-        self.createScene.start()
 
-def create_scene_callback(self):
-    self.song.create_scene(-1)
-    self.createSceneStarted = False
-    for track in self.tracks:
-        if isinstance(track, ClTrack) and track.outOfScenes:
-            track.outOfScenes = False
-            self.new_scene = True
-            track.getNewClipSlot()
-    self.new_scene = False
 
 def delete_all(self, data):
     for track in self.tracks:
@@ -297,8 +263,3 @@ def new_clip(self, data):
         track.new_clip()
 
 
-class TempTrack(object):
-    def __init__(self, name, arm, current_monitoring_state):
-        self.name = name
-        self.arm = arm
-        self.current_monitoring_state = current_monitoring_state

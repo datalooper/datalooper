@@ -1,5 +1,6 @@
 from consts import *
 import math
+from consts import *
 
 
 class Track(object):
@@ -10,18 +11,14 @@ class Track(object):
         self.track = track
         self.trackNum = trackNum
         self.song = song
-        self.req_record = 0
-        self.artificial_arm = -1
+
         if self.track.can_be_armed:
             self.orig_arm = self.track.arm
         else:
             self.orig_arm = 1
         self.lastState = CLEAR_STATE
 
-    def send_sysex(self, looper, control, data):
-        self.__parent.send_sysex(looper, control, data)
-
-    def clearListener(self):
+    def clear_listener(self):
         pass
 
     def toggle_playback(self):
@@ -38,19 +35,35 @@ class Track(object):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + "undo pressed")
 
-    def clear(self):
+    def clear(self, clear_type):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + "clear pressed")
 
-    def toggle_mute(self):
-        pass
+    def start(self, start_type):
+        if self.lastState != CLEAR_STATE:
+            self.record(start_type)
 
-    def updateState(self, state):
-        self.send_message("updating state: " + str(state))
-        self.lastState = state
-        if self.trackNum not in self.__parent.duplicates or (
-                self.trackNum in self.__parent.duplicates and "LED" in self.track.name):
-            self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
+    def mute(self, mute_type):
+        if mute_type == OFF:
+            self.track.mute = 1
+        elif mute_type == ON:
+            self.track.mute = 0
+        else:
+            if self.track.mute == 1:
+                self.track.mute = 0
+            elif self.track.mute == 0:
+                self.track.mute = 1
+
+    def update_state(self, state):
+        if state != -1:
+            self.lastState = state
+        self.__parent.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
+        # if self.trackNum not in self.__parent.duplicates or (
+        #         self.trackNum in self.__parent.duplicates and "LED" in self.track.name):
+        #     self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
 
     def remove_track(self):
+        pass
+
+    def change_mode(self, mode):
         pass

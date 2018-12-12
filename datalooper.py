@@ -5,10 +5,10 @@ from consts import *
 from trackhandler import TrackHandler
 from sysex import Sysex
 from actions import Actions
+from collections import defaultdict
+from state import State
 
 class DataLooper(ControlSurface):
-    # variables
-    cur_beat = 0
 
     def __init__(self, c_instance):
         super(DataLooper, self).__init__(c_instance)
@@ -21,19 +21,21 @@ class DataLooper(ControlSurface):
         self.song().add_current_song_time_listener(self.on_time_change)
 
         # listens to track add/remove
-        self.song().add_tracks_listener(self.on_track_change)
+        self.song().add_tracks_listener(self.on_track_added_or_removed)
+
+        self.tracks = defaultdict(list)
+
+        self.state = State(self.song)
 
         # creates obj to handle tracks
-        self.__track_handler = TrackHandler(self, self.song())
+        self.__track_handler = TrackHandler(self, self.song(), self.tracks)
 
         # creates obj to handle actions
-        self.__action_handler = Actions(self, self.__track_handler.scan_tracks(), self.song())
+        self.__action_handler = Actions(self, self.tracks, self.song())
 
+        self.__track_handler.scan_tracks()
         # initializes base obj
         self.live = Live.Application.get_application()
-
-    def refresh_state(self):
-        self.log_message("refreshing state")
 
     def send_message(self, m):
         self.log_message(m)
@@ -41,13 +43,18 @@ class DataLooper(ControlSurface):
     def set_bpm(self, bpm):
         self.song().tempo = bpm
 
-    def on_track_change(self):
-        self.__action_handler.update_tracks(self.__track_handler.scan_tracks())
+    def on_track_added_or_removed(self):
+        self.send_message("on track change")
+        self.__track_handler.scan_tracks()
+
+    def on_track_name_changed(self):
+        self.send_message("on track name change")
+        self.__track_handler.scan_tracks()
 
     def on_time_change(self):
         time = self.song().get_current_beats_song_time()
-        if time.beats != self.cur_beat:
-            self.cur_beat = time.beats
+        if time.beats != self.state.curBeats:
+            self.state.curBeats = time.beats
             looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0, 247)
             self.send_midi(looper_status_sysex)
 
@@ -74,6 +81,9 @@ class DataLooper(ControlSurface):
         if len(midi_bytes) != 3:
             self.handle_sysex(midi_bytes)
 
+    def update_tracks(self):
+        self.__action_handler.update_tracks(self.tracks)
+
     def handle_sysex(self, midi_bytes):
         # {0xF0, 0x41, (byte) *instance, (byte) *bank, (byte) looperNum, (byte) mode, (byte) action, (byte) data1, (byte) data2, sending,  0xF7}
         # [0] : generic
@@ -90,7 +100,7 @@ class DataLooper(ControlSurface):
 
         sysex = Sysex(midi_bytes)
         self.send_message(self.get_method(sysex.action))
-        getattr(self.__track_handler, self.get_method(sysex.action))(sysex)
+        getattr(self.__action_handler, self.get_method(sysex.action))(sysex)
 
     @staticmethod
     def get_method(argument):
