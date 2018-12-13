@@ -8,8 +8,8 @@ import cltrack
 # 4. Clear : Clear will clear the current clip
 #################
 class ClAudioTrack(cltrack.ClTrack):
-    def __init__(self, parent, track, trackNum, song):
-        super(ClAudioTrack, self).__init__(parent, track, trackNum, song)
+    def __init__(self, parent, track, trackNum, song, state, action_handler):
+        super(ClAudioTrack, self).__init__(parent, track, trackNum, song, state, action_handler)
         self.__parent = parent
 
     ### SCENARIOS ###

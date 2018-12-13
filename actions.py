@@ -33,15 +33,19 @@ from cltrack import ClTrack
 from dltrack import DlTrack
 from track import Track
 from state import State
+import Live
 
 
 class Actions:
 
-    def __init__(self, parent, tracks, song):
+    def __init__(self, parent, tracks, song, state):
         self.tracks = tracks
-        self.state = State(song)
+        self.state = state
         self.song = song
         self.__parent = parent
+        self.timerCounter = 0
+        self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
+
 
     ##### HELPER FUNCTIONS #####
 
@@ -183,7 +187,7 @@ class Actions:
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.call_method_on_all_tracks(data, data.data1, "start", data.data2)
             if data.data2 == 0:
-                self.jump_to_next_bar()
+                self.jump_to_next_bar(False)
         else:
             self.call_method_on_all_tracks(data, data.data1, "stop", data.data2)
 
@@ -227,19 +231,39 @@ class Actions:
         pass
 
     def tap_tempo(self, data):
-        pass
+        self.song.tap_tempo()
+        if self.state.tap_tempo_counter >= data.data1:
+            self.state.restore_metro()
+        self.state.tap_tempo_counter += 1
 
-    def jump_to_next_bar(self):
+    def jump_to_next_bar(self, changeBPM):
         self.state.was_recording = self.song.record_mode
         time = int(self.song.current_song_time) + (self.song.signature_denominator - (
                 int(self.song.current_song_time) % self.song.signature_denominator))
         self.state.bpm = self.song.tempo
         self.song.current_song_time = time
         self.song.record_mode = self.state.was_recording
-        # if changeBPM:
-        #     self.timerCounter = 0
-        #     self.tempo_change_timer.start()
+        if changeBPM:
+            self.timerCounter = 0
+            self.tempo_change_timer.start()
 
     def change_mode(self, data):
-        self.state.mode = data.data1
-        self.call_method_on_all_tracks(data, BOTH_TRACK_TYPES, "change_mode", data.data1)
+        self.state.change_mode(data.data1)
+        self.call_method_on_all_tracks(data, BOTH_TRACK_TYPES, "change_mode")
+
+    def update_mode(self, mode):
+        self.state.mode = mode
+        for tracks in self.tracks.values():
+            for track in tracks:
+                track.change_mode()
+        self.__parent.send_sysex(0, CHANGE_MODE_COMMAND, self.state.mode)
+
+
+    def execute_tempo_change(self):
+    # kills timer after 50ms just in case it wants to run forever for some reason
+        self.timerCounter += 1
+        if self.song.tempo != self.state.bpm:
+            self.song.tempo = self.state.bpm
+            self.tempo_change_timer.stop()
+        elif self.timerCounter > 50:
+            self.tempo_change_timer.stop()

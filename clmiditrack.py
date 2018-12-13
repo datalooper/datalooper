@@ -4,8 +4,8 @@ from consts import *
 
 class ClMidiTrack(cltrack.ClTrack):
 
-    def __init__(self, parent, track, trackNum, song):
-        super(ClMidiTrack, self).__init__(parent, track, trackNum, song)
+    def __init__(self, parent, track, trackNum, song, state, action_handler):
+        super(ClMidiTrack, self).__init__(parent, track, trackNum, song , state, action_handler)
         self.__parent = parent
         self.trackStore = []
         self.prevNotes = list()

@@ -7,8 +7,8 @@ from track import Track
 class DlTrack(Track):
     """ Class handling looper track from DataLooper """
 
-    def __init__(self, parent, track, device, trackNum, song):
-        super(DlTrack, self).__init__(parent, track, trackNum, song)
+    def __init__(self, parent, track, device, trackNum, song, state, action_handler):
+        super(DlTrack, self).__init__(parent, track, trackNum, song, state, action_handler)
         self.tempo_control = -1
         self.device = device
         self.state = device.parameters[STATE]
@@ -80,7 +80,7 @@ class DlTrack(Track):
             self.update_state(CLEAR_STATE)
             self.request_control(CLEAR_CONTROL)
             self.ignore_stop = True
-        elif self.lastState != STOP_STATE and self.lastState != CLEAR_STATE:
+        elif self.lastState != STOP_STATE:
             if quantized or not self.song.is_playing:
                 self.request_control(STOP_CONTROL)
             else:
@@ -118,15 +118,15 @@ class DlTrack(Track):
                 bpms.append(bpm)
 
         bpm = min(bpms, key=lambda x: abs(x - closest_to_tempo))
-        self.__parent.set_bpm(bpm)
         self.send_message("bpm: " + str(bpm))
         self.req_bpm = True
         self.rectime = 0
+        self.global_state.updateBPM(bpm)
 
-    def change_mode(self, mode):
-        if mode == LOOPER_MODE:
+    def change_mode(self):
+        if self.global_state.mode == LOOPER_MODE:
             self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
-        elif mode == NEW_SESSION_MODE:
+        elif self.global_state.mode == NEW_SESSION_MODE:
             self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
             self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
 
@@ -134,11 +134,14 @@ class DlTrack(Track):
         self.timer.start()
 
     def on_tempo_change_callback(self):
+        self.send_message("on tempo change callback")
+        self.send_message(str(self.req_bpm))
         if self.req_bpm:
             self.update_state(PLAYING_STATE)
             self.state.value = PLAYING_STATE
-            self.__parent.jump_to_next_bar(True)
+            self.action_handler.jump_to_next_bar(True)
             self.req_bpm = False
+            self.action_handler.update_mode(LOOPER_MODE)
 
     def remove_track(self):
         if self.state.value_has_listener(self._on_looper_param_changed):

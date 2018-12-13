@@ -6,8 +6,8 @@ import Live
 class ClTrack(Track):
     """ Class handling clip triggering from DataLooper """
 
-    def __init__(self, parent, track, trackNum, song):
-        super(ClTrack, self).__init__(parent, track, trackNum, song)
+    def __init__(self, parent, track, trackNum, song, state, action_handler):
+        super(ClTrack, self).__init__(parent, track, trackNum, song, state, action_handler)
         self.__parent = parent
         self.clipSlot = -1
         self.lastClip = -1

@@ -10,11 +10,13 @@ class TrackHandler:
 
 
     """ Class handling looper & clip tracks """
-    def __init__(self, parent, song, tracks):
+    def __init__(self, parent, song, tracks, state, actions):
         self.__parent = parent
         self.song = song
+        self.actions = actions
         self.tracks = tracks
         self.trackStore = []
+        self.state = state
 
     def disconnect(self):
         self.__parent.disconnect()
@@ -48,8 +50,6 @@ class TrackHandler:
                 track.add_name_listener(self.__parent.on_track_name_changed)
         self.clear_unused_tracks(track_nums)
 
-        self.__parent.update_tracks()
-
     def clear_unused_tracks(self, track_nums):
         # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
         i = 0
@@ -74,16 +74,16 @@ class TrackHandler:
                 for device in track.devices:
                     if device.name == "Looper":
                         self.send_message("adding looper track: " + str(trackNum))
-                        self.tracks[str(trackNum)].append(DlTrack(self, track, device, trackNum, self.song))
+                        self.tracks[str(trackNum)].append(DlTrack(self, track, device, trackNum, self.song, self.state, self.actions))
                     else:
                         self.send_message("Looper Device Does Not Exist on Track: " + track.name)
         elif track_key == CLIPLOOPER_KEY:
             if track.has_midi_input:
                 self.send_message("adding clip midi track " + str(trackNum))
-                self.tracks[str(trackNum)].append(ClMidiTrack(self, track, trackNum, self.song))
+                self.tracks[str(trackNum)].append(ClMidiTrack(self, track, trackNum, self.song, self.state, self.actions))
             elif track.has_audio_input:
                 self.send_message("adding clip audio track")
-                self.tracks[str(trackNum)].append(ClAudioTrack(self, track, trackNum, self.song))
+                self.tracks[str(trackNum)].append(ClAudioTrack(self, track, trackNum, self.song, self.state, self.actions))
 
     def send_midi(self, midi):
         self.__parent.send_midi(midi)

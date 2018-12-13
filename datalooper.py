@@ -25,13 +25,13 @@ class DataLooper(ControlSurface):
 
         self.tracks = defaultdict(list)
 
-        self.state = State(self.song)
-
-        # creates obj to handle tracks
-        self.__track_handler = TrackHandler(self, self.song(), self.tracks)
+        self.state = State(self.song())
 
         # creates obj to handle actions
-        self.__action_handler = Actions(self, self.tracks, self.song())
+        self.__action_handler = Actions(self, self.tracks, self.song(), self.state)
+
+        # creates obj to handle tracks
+        self.__track_handler = TrackHandler(self, self.song(), self.tracks, self.state, self.__action_handler)
 
         self.__track_handler.scan_tracks()
         # initializes base obj
@@ -80,9 +80,6 @@ class DataLooper(ControlSurface):
     def receive_midi(self, midi_bytes):
         if len(midi_bytes) != 3:
             self.handle_sysex(midi_bytes)
-
-    def update_tracks(self):
-        self.__action_handler.update_tracks(self.tracks)
 
     def handle_sysex(self, midi_bytes):
         # {0xF0, 0x41, (byte) *instance, (byte) *bank, (byte) looperNum, (byte) mode, (byte) action, (byte) data1, (byte) data2, sending,  0xF7}

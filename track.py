@@ -6,11 +6,13 @@ from consts import *
 class Track(object):
     """ Class handling looper track from DataLooper """
 
-    def __init__(self, parent, track, trackNum, song):
+    def __init__(self, parent, track, trackNum, song, state, action_handler):
         self.__parent = parent
         self.track = track
         self.trackNum = trackNum
         self.song = song
+        self.global_state = state
+        self.action_handler = action_handler
 
         if self.track.can_be_armed:
             self.orig_arm = self.track.arm
@@ -65,5 +67,5 @@ class Track(object):
     def remove_track(self):
         pass
 
-    def change_mode(self, mode):
+    def change_mode(self):
         pass
