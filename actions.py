@@ -139,6 +139,8 @@ class Actions:
 
     def bank(self, data):
         self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
+        if self.song.is_playing:
+            self.__parent.send_sysex(data.looper_num, CHANGE_BANK_COMMAND, data.looper_num)
 
     def change_instance(self, data):
         pass

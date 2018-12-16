@@ -37,6 +37,7 @@ class DataLooper(ControlSurface):
         # initializes base obj
         self.live = Live.Application.get_application()
 
+
     def send_message(self, m):
         self.log_message(m)
 
@@ -61,7 +62,7 @@ class DataLooper(ControlSurface):
     def disconnect(self):
         self.log_message("looper disconnecting")
         looper_status_sysex = (240, 1, 2, 3, 0, 4, 0, 247)
-        self.send_midi(looper_status_sysex)
+        self.send_sysex(0, ABLETON_CONNECTED_COMMAND, 0)
         super(DataLooper, self).disconnect()
 
     def send_midi(self, midi_event_bytes):
@@ -98,6 +99,15 @@ class DataLooper(ControlSurface):
         sysex = Sysex(midi_bytes)
         self.send_message(self.get_method(sysex.action))
         getattr(self.__action_handler, self.get_method(sysex.action))(sysex)
+
+
+    def refresh_state(self):
+        """Live -> Script
+        Send out MIDI to completely update the attached MIDI controller.
+        Will be called when requested by the user, after for example having reconnected
+        the MIDI cables...
+        """
+        self.send_sysex(0, ABLETON_CONNECTED_COMMAND, 1)
 
     @staticmethod
     def get_method(argument):

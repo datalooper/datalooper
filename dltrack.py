@@ -80,13 +80,17 @@ class DlTrack(Track):
             self.update_state(CLEAR_STATE)
             self.request_control(CLEAR_CONTROL)
             self.ignore_stop = True
-        elif self.lastState != STOP_STATE:
+        elif self.lastState != STOP_STATE and self.lastState != CLEAR_STATE:
             if quantized or not self.song.is_playing:
                 self.request_control(STOP_CONTROL)
             else:
                 self.send_message("entering stop state")
                 self.update_state(STOP_STATE)
                 self.state.value = STOP_STATE
+
+        # SEND OUT CONTROL NO MATTER WHAT IF SONG IS NOT PLAYING, FOR MAPPING PARAMS
+        elif not self.song.is_playing:
+            self.request_control(STOP_CONTROL)
 
     def toggle_playback(self):
         if self.lastState == STOP_STATE:
@@ -95,7 +99,9 @@ class DlTrack(Track):
             self.request_control(STOP_CONTROL)
 
     def undo(self):
-        self.request_control(UNDO_CONTROL)
+        if self.lastState != CLEAR_STATE or not self.song.is_playing:
+            self.request_control(UNDO_CONTROL)
+
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
 
