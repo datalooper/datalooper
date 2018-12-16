@@ -57,6 +57,7 @@ class Track(object):
                 self.track.mute = 1
 
     def update_state(self, state):
+        self.send_message("updating state")
         if state != -1:
             self.lastState = state
         self.__parent.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
