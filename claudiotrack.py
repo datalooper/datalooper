@@ -8,8 +8,8 @@ import cltrack
 # 4. Clear : Clear will clear the current clip
 #################
 class ClAudioTrack(cltrack.ClTrack):
-    def __init__(self, parent, track, trackNum, song):
-        super(ClAudioTrack, self).__init__(parent, track, trackNum, song)
+    def __init__(self, parent, track, trackNum, song, state, action_handler):
+        super(ClAudioTrack, self).__init__(parent, track, trackNum, song, state, action_handler)
         self.__parent = parent
 
     ### SCENARIOS ###
@@ -19,14 +19,13 @@ class ClAudioTrack(cltrack.ClTrack):
     #################
     def record(self, quantized):
         self.__parent.send_message("record pressed")
+        if self.mutedClipSlot != -1 and self.mutedClipSlot.has_clip:
+            self.mutedClipSlot.clip.muted = False
+            self.mutedClipSlot = -1
         if self.clipSlot == -1 or self.clipSlot.is_playing and not self.clipSlot.is_recording:
-            self.getNewClipSlot()
+            self.get_new_clip_slot(False)
         if not self.clipSlot.is_playing or self.clipSlot.is_recording:
-            self.fireClip()
-
-    def clear(self):
-        if self.clipSlot != -1 and self.clipSlot.has_clip:
-            self.clipSlot.delete_clip()
+            self.fire_clip()
 
     def undo(self):
-        self.getNewClipSlot()
+        self.get_new_clip_slot(False)
