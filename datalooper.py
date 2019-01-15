@@ -37,7 +37,6 @@ class DataLooper(ControlSurface):
         # initializes base obj
         self.live = Live.Application.get_application()
 
-
     def send_message(self, m):
         self.log_message(m)
 
