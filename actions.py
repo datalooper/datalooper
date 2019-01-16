@@ -106,6 +106,15 @@ class Actions:
                     return False
         return True
 
+    def check_track_clear(self, tracks):
+        if tracks is None:
+            self.__parent.send_message("no tracks present")
+            return True
+        for track in tracks:
+            if track.lastState != CLEAR_STATE:
+                return False
+        return True
+
     ##### TRACK ACTIONS #####
 
     def record(self, data):
@@ -138,6 +147,15 @@ class Actions:
     ##### BANKING ACTIONS #####
 
     def bank(self, data):
+        if data.data1 != 1:
+            self.update_bank(data)
+        else:
+            self.__parent.send_message("checking if track is clear")
+            self.__parent.send_message(str(self.tracks.get(self.get_track_num_str(data))))
+            if self.check_track_clear(self.tracks.get(self.get_track_num_str(data))):
+                self.update_bank(data)
+
+    def update_bank(self, data):
         self.__parent.send_message("updating bank: " + str(data.looper_num))
         data.bank = data.looper_num
         if self.song.is_playing:
