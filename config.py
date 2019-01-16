@@ -15,6 +15,7 @@ address_map = [
     # button 4 top
     ((-1, 2, 3, 0, 0), ["clear_all", "exit_new_session"]),
     ((-1, 2, 3, 2, 2), ["enter_new_session"]),
+    ((-1, 2, 3, 2, 5), ["enter_config"]),
 
     # button 4 middle
     ((-1, 1, 3, 0, 0), ["mute_all", "tap_tempo"]),

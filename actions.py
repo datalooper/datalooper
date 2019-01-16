@@ -109,7 +109,7 @@ class Actions:
     ##### TRACK ACTIONS #####
 
     def record(self, data):
-
+        self.__parent.send_message(str(data))
         # If datalooper is in 'unquantized stop' state, turn on the metronome and jump to the downbeat
         if self.state.unquantized_stop:
             self.song.metronome = self.state.metro
