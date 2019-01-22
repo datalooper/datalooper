@@ -1,38 +1,7 @@
-# 0: "record",
-# 1: "stop",
-# 2: "undo",
-# 3: "clear",
-# 4: "mute_track",
-# 5: "new_clip",
-# 6: "bank",
-# 7: "change_instance",
-# 8: "record_bank",
-# 9: "stop_bank",
-# 10: "undo_bank",
-# 11: "clear_bank",
-# 12: "start_bank",
-# 13: "mute_bank",
-# 14: "record_all",
-# 15: "stop_all",
-# 16: "undo_all",
-# 17: "clear_all",
-# 18: "start_all",
-# 19: "mute_all",
-# 20: "toggle_stop_start",
-# 21: "stop_all_playing_clips",
-# 22: "mute_all_tracks_playing_clips",
-# 23: "create_scene",
-# 24: "metronome_control",
-# 25: "tap_tempo",
-# 26: "jump_to_next_bar",
-# 27: "change_mode"
-
-
 from consts import *
 from cltrack import ClTrack
 from dltrack import DlTrack
 from track import Track
-from state import State
 import Live
 
 
