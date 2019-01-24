@@ -126,10 +126,12 @@ class Actions:
 
     def update_bank(self, data):
         self.__parent.send_message("updating bank: " + str(data.looper_num))
+
         data.bank = data.looper_num
         if self.song.is_playing:
             self.__parent.send_sysex(data.looper_num, CHANGE_BANK_COMMAND, data.looper_num)
         self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
+
 
     def change_instance(self, data):
         pass

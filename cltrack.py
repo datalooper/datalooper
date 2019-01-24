@@ -110,6 +110,7 @@ class ClTrack(Track):
             self.clipStopping = False
             self.update_state(state)
         elif state == STOP_STATE and not self.clipStopping:
+
             self.update_state(CLEAR_STATE)
         else:
             self.update_state(state)
@@ -136,8 +137,13 @@ class ClTrack(Track):
             if self.clipSlot.has_clip and self.clipSlot.clip.playing_status_has_listener(self.on_clip_status_change):
                 self.clipSlot.clip.remove_playing_status_listener(self.on_clip_status_change)
 
-    ###### ACTIONS ######
+    def on_clip_mute_change(self):
+        self.__parent.send_message("mute change")
+        self.mutedClipSlot.clip.is_playing = True
+        self.mutedClipSlot.clip.remove_muted_listener(self.on_clip_mute_change)
+        self.mutedClipSlot = -1
 
+    ###### ACTIONS ######
     def stop(self, quantized):
         self.send_message("stopping")
         if self.track.playing_slot_index >= 0:
@@ -149,8 +155,9 @@ class ClTrack(Track):
                 self.clipStopping = True
                 clip_slot.clip.stop()
             elif clip_slot.has_clip:
+                #instant stop
                 clip_slot.clip.muted = True
-                self.mutedClipSlot = clip_slot
+                clip_slot.clip.muted = False
 
     def toggle_playback(self):
         if self.clipSlot != -1 and self.clipSlot.has_clip:
