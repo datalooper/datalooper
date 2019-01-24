@@ -1,0 +1,212 @@
+{
+  "Metronome Control": {
+    "sysex_prefix": 9,
+    "options": {
+      "Metronome Control": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Off": 0,
+            "On": 1,
+            "Toggle": 2
+          }
+        }
+      }
+    }
+  },
+  "Looper Control": {
+    "options": {
+      "DL# Number": {
+        "placeholder": "1",
+        "value": "1",
+        "range": {
+          "type": "number",
+          "min": 1,
+          "max": 999
+        }
+      },
+      "Looper Action": {
+        "value": "Record",
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Record": 0,
+            "Stop": 1,
+            "Undo": 2,
+            "Clear": 3,
+            "Toggle Mute": 4
+          }
+        }
+      },
+      "Quantize Action? (Record and Stop only)": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Yes": 1,
+            "No": 0
+          }
+        }
+      }
+    }
+  },
+  "Auto Scanning Clip Control": {
+    "sysex_prefix": 11,
+    "options": {
+      "CL# Number": {
+        "placeholder": "1",
+        "value": "1",
+        "range": {
+          "type": "number",
+          "min": 1,
+          "max": 999
+        }
+      },
+      "Clip Action": {
+        "value": "Record",
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Record": 0,
+            "Stop": 1,
+            "Undo": 2,
+            "Clear": 3,
+            "Toggle Mute": 4
+          }
+        }
+      },
+      "Quantize Action? (Record and Stop only)": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Yes": 1,
+            "No": 0
+          }
+        }
+      }
+    }
+  },
+  "Fixed Clip Control": {
+    "sysex_prefix": 11,
+    "options": {
+      "CL# Number": {
+        "placeholder": "1",
+        "value": "1",
+        "range": {
+          "type": "number",
+          "min": 1,
+          "max": 999
+        }
+      },
+      "Clip Action": {
+        "value": "Record",
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Record": 0,
+            "Stop": 1,
+            "Undo": 2,
+            "Clear": 3,
+            "Toggle Mute": 4
+          }
+        }
+      },
+      "Clip Slot #": {
+        "placeholder": "1",
+        "value": "1",
+        "range": {
+          "type": "number",
+          "min": 1,
+          "max": 999
+        }
+      },
+      "Quantize Action?": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Yes": 1,
+            "No": 0
+          }
+        }
+      }
+    }
+  },
+  "Stop/Start All": {
+    "sysex_prefix": 13,
+    "options": {
+      "Stop/Start All": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "CL# Clips": 0,
+            "All playing clips": 1,
+            "DL# Loopers": 2,
+            "CL# Clips and DL# Loopers": 3,
+            "All playing clips and DL# Loopers": 4
+          }
+        }
+      },
+      "Quantize Action?": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Yes": 1,
+            "No": 0
+          }
+        }
+      }
+    }
+  },
+  "Clear All": {
+    "sysex_prefix": 13,
+    "options": {
+      "Clear All": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Currently Selected CL# Clips": 0,
+            "All CL# Clips": 1,
+            "DL# Loopers": 2,
+            "Currently Selected CL# Clips and DL# Loopers": 3,
+            "All CL# Clips and DL# Loopers": 4
+          }
+        }
+      },
+      "Quantize Action?": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Yes": 1,
+            "No": 0
+          }
+        }
+      }
+    }
+  },
+  "Transport Control": {
+    "sysex_prefix": 12,
+    "options": {
+      "Transport Control": {
+        "range": {
+          "type": "dropdown",
+          "options": {
+            "Stop Transport": 0,
+            "Start Transport": 1,
+            "Toggle Stop/Play": 2
+          }
+        }
+      }
+    }
+  },
+  "Launch Scene": {
+    "sysex_prefix": 14,
+    "options": {
+      "SC# Number": {
+        "range": {
+          "type": "number",
+          "min": 1,
+          "max": 999
+        }
+      }
+    }
+  }
+}

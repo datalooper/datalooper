@@ -7,6 +7,8 @@ from sysex import Sysex
 from actions import Actions
 from collections import defaultdict
 from state import State
+import json
+import os
 
 class DataLooper(ControlSurface):
 
@@ -36,6 +38,9 @@ class DataLooper(ControlSurface):
         self.__track_handler.scan_tracks()
         # initializes base obj
         self.live = Live.Application.get_application()
+        path = os.path.dirname(os.path.realpath(__file__)) + '/commands.json'
+        with open(path, "r") as read_file:
+           data = json.load(read_file)
 
     def send_message(self, m):
         self.log_message(m)
@@ -111,28 +116,15 @@ class DataLooper(ControlSurface):
     @staticmethod
     def get_method(argument):
         action_map = {
-            0: "record",
-            1: "stop",
-            2: "undo",
-            3: "clear",
-            4: "mute_track",
-            5: "new_clip",
-            6: "bank",
-            7: "change_instance",
-            8: "record_bank",
-            9: "stop_bank",
-            10: "undo_bank",
-            11: "clear_bank",
-            12: "start_bank",
-            13: "mute_bank",
-            14: "record_all",
-            15: "stop_all",
-            16: "undo_all",
-            17: "clear_all",
-            18: "start_all",
-            19: "mute_all",
-            20: "toggle_stop_start",
-            21: "stop_all_playing_clips",
+            0: "metronome_control",
+            1: "looper_control",
+            2: "auto_scanning_clip_control",
+            3: "fixed_clip_control",
+            4: "start_stop_all",
+            6: "transport_control",
+            7: "scene_control",
+            8: "change_mode",
+            9: "change_bank",
             22: "mute_all_tracks_playing_clips",
             23: "create_scene",
             24: "metronome_control",
