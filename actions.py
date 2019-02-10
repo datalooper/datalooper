@@ -39,14 +39,12 @@ class Actions:
         return str(self.get_track_num(data))
 
     def call_method_on_tracks(self, data, track_type, method_name, *args):
-        if data.mode == self.state.mode:
-            self.__parent.send_message("track num: " + self.get_track_num_str(data))
-            tracks = self.tracks.get(self.get_track_num_str(data))
-            self.__parent.send_message(str(tracks))
-            if tracks is not None:
-                for track in tracks:
-                    if isinstance(track, self.get_looper_type(track_type)):
-                        getattr(track, method_name)(*args)
+        tracks = self.tracks.get(str(data.data1))
+        self.__parent.send_message(str(tracks))
+        if tracks is not None:
+            for track in tracks:
+                if isinstance(track, self.get_looper_type(track_type)):
+                    getattr(track, method_name)(*args)
 
     def call_method_on_bank(self, data, track_type, method_name, *args):
         if data.mode == self.state.mode:
@@ -87,6 +85,7 @@ class Actions:
     ##### TRACK ACTIONS #####
 
     def record(self, data):
+        self.__parent.send_message("looping recrod")
         self.__parent.send_message(str(data))
         # If datalooper is in 'unquantized stop' state, turn on the metronome and jump to the downbeat
         if self.state.unquantized_stop:
@@ -113,6 +112,9 @@ class Actions:
     def new_clip(self, data):
         self.call_method_on_tracks(data, CLIP_TRACK, "new_clip")
 
+    def looper_control(self, data):
+        self.call_method_on_tracks(data, LOOPER_TRACK, LOOPER_ACTIONS.get(data.data2), data.data3)
+
     ##### BANKING ACTIONS #####
 
     def bank(self, data):
@@ -126,10 +128,27 @@ class Actions:
 
     def update_bank(self, data):
         self.__parent.send_message("updating bank: " + str(data.looper_num))
+        self.check_arm_conflicts(data)
         data.bank = data.looper_num
         if self.song.is_playing:
             self.__parent.send_sysex(data.looper_num, CHANGE_BANK_COMMAND, data.looper_num)
         self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
+
+    def check_arm_conflicts(self, data):
+        old_bank = data.bank
+        new_bank = data.looper_num
+        x = 0
+        while x < 3:
+            new_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (new_bank * NUM_TRACKS) + x))
+            old_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (old_bank * NUM_TRACKS) + x))
+            if old_tracks is not None:
+                for old_track in old_tracks:
+                    if new_tracks is not None:
+                        for new_track in new_tracks:
+                            if new_track.track.input_routing_type.display_name == old_track.track.input_routing_type.display_name:
+                                old_track.track.arm = False
+                            new_track.track.arm = True
+            x += 1
 
     def change_instance(self, data):
         pass

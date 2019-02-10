@@ -89,3 +89,11 @@ DELETE_CLIP = 0
 NEW_SCENE_KEEP_PLAYING = 1
 NEW_SCENE_STOP = 2
 STOP_CLIP = 3
+
+LOOPER_ACTIONS = {
+    0 : 'record',
+    1 : 'stop',
+    2 : 'undo',
+    3 : 'clear',
+    4 : 'toggle_mute'
+}

@@ -25,6 +25,8 @@ class DataLooper(ControlSurface):
         # listens to track add/remove
         self.song().add_tracks_listener(self.on_track_added_or_removed)
 
+        self.song().add_signature_numerator_listener(self.on_signature_numerator_change)
+
         self.tracks = defaultdict(list)
 
         self.state = State(self.song())
@@ -41,6 +43,8 @@ class DataLooper(ControlSurface):
         path = os.path.dirname(os.path.realpath(__file__)) + '/commands.json'
         with open(path, "r") as read_file:
            data = json.load(read_file)
+
+        self.sysex(0x00, 0x01)
 
     def send_message(self, m):
         self.log_message(m)
@@ -60,13 +64,23 @@ class DataLooper(ControlSurface):
         time = self.song().get_current_beats_song_time()
         if time.beats != self.state.curBeats:
             self.state.curBeats = time.beats
-            looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0, 247)
-            self.send_midi(looper_status_sysex)
+            self.sysex(0x01, self.state.curBeats)
+
+    def sysex(self, message_type, data):
+        self.send_midi((0xF0, 0x1E, message_type, data, 0xF7))
+
+    def on_signature_numerator_change(self):
+        self.send_message("numerator changed")
+        self.send_midi((0xF0, 0x1E, 0x01, self.song().signature_numerator, 0xF7))
+
+    def connect(self):
+        self.log_message("looper connecting")
+        self.sysex(0x00, 0x01)
 
     def disconnect(self):
         self.log_message("looper disconnecting")
-        looper_status_sysex = (240, 1, 2, 3, 0, 4, 0, 247)
-        self.send_sysex(0, ABLETON_CONNECTED_COMMAND, 0)
+        self.sysex(0x00, 0x00)
+
         super(DataLooper, self).disconnect()
 
     def send_midi(self, midi_event_bytes):
@@ -87,18 +101,6 @@ class DataLooper(ControlSurface):
             self.handle_sysex(midi_bytes)
 
     def handle_sysex(self, midi_bytes):
-        # {0xF0, 0x41, (byte) *instance, (byte) *bank, (byte) looperNum, (byte) mode, (byte) action, (byte) data1, (byte) data2, sending,  0xF7}
-        # [0] : generic
-        # [1] : generic
-        # [2] : looper instance
-        # [3] : looper bank
-        # [4] : looper number
-        # [5] : mode
-        # [6] : action
-        # [7] : data1
-        # [8] : data2
-        # [9] : sending
-        # [10] : generic
 
         sysex = Sysex(midi_bytes)
         self.send_message(self.get_method(sysex.action))
@@ -111,7 +113,7 @@ class DataLooper(ControlSurface):
         Will be called when requested by the user, after for example having reconnected
         the MIDI cables...
         """
-        self.send_sysex(0, ABLETON_CONNECTED_COMMAND, 1)
+        self.sysex(0x00, 0x01)
 
     @staticmethod
     def get_method(argument):
@@ -125,12 +127,5 @@ class DataLooper(ControlSurface):
             7: "scene_control",
             8: "change_mode",
             9: "change_bank",
-            22: "mute_all_tracks_playing_clips",
-            23: "create_scene",
-            24: "metronome_control",
-            25: "tap_tempo",
-            26: "jump_to_next_bar",
-            27: "change_mode",
-            28: "new_clips_on_all"
         }
         return action_map.get(argument, "Invalid Action")
