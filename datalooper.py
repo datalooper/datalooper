@@ -64,7 +64,7 @@ class DataLooper(ControlSurface):
         time = self.song().get_current_beats_song_time()
         if time.beats != self.state.curBeats:
             self.state.curBeats = time.beats
-            self.sysex(0x01, self.state.curBeats)
+            self.sysex(DOWNBEAT_COMMAND, self.state.curBeats)
 
     def sysex(self, message_type, data):
         self.send_midi((0xF0, 0x1E, message_type, data, 0xF7))
@@ -86,9 +86,10 @@ class DataLooper(ControlSurface):
     def send_midi(self, midi_event_bytes):
         self.__c_instance.send_midi(midi_event_bytes)
 
-    def send_sysex(self, looper, control, data):
+    def send_sysex(self, *data):
         # self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
-        looper_status_sysex = (240, looper, control, 3, data, 247)
+        looper_status_sysex = (0xF0, 0x1E) + data + (0xF7,)
+        self.send_message(looper_status_sysex);
         self.send_midi(looper_status_sysex)
 
     def send_program_change(self, program):

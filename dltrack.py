@@ -41,9 +41,9 @@ class DlTrack(Track):
     def send_message(self, message):
         self.__parent.send_message(message)
 
-    def request_control(self, control):
-        self.send_message("Requesting control: " + str(control))
-        self.__parent.send_sysex(self.trackNum, REQUEST_CONTROL_COMMAND, control)
+    def request_control(self, controlNum):
+        self.send_message("Requesting control: ")
+        self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, REQUEST_NOTE, (self.trackNum * NUM_CONTROLS) + controlNum)
 
     def record(self, quantized):
         self.__parent.send_message(

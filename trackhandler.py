@@ -55,7 +55,7 @@ class TrackHandler:
         i = 0
         while i < NUM_TRACKS:
             if i not in track_nums:
-                self.__parent.send_sysex(i, CHANGE_STATE_COMMAND, CLEAR_STATE)
+                self.__parent.send_sysex(CHANGE_STATE_COMMAND,i, CLEAR_STATE)
             i += 1
 
     def clear_tracks(self):
@@ -91,8 +91,8 @@ class TrackHandler:
     def send_message(self, message):
         self.__parent.send_message(message)
 
-    def send_sysex(self, looper, control, data):
-        self.__parent.send_sysex(looper, control, data)
+    def send_sysex(self, *data):
+        self.__parent.send_sysex(*data)
 
     def session_record(self, overdubbing, curTrack):
         if overdubbing:

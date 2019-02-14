@@ -39,7 +39,7 @@ class Actions:
         return str(self.get_track_num(data))
 
     def call_method_on_tracks(self, data, track_type, method_name, *args):
-        tracks = self.tracks.get(str(data.data1))
+        tracks = self.tracks.get(str(data.data1-1))
         self.__parent.send_message(str(tracks))
         if tracks is not None:
             for track in tracks:
@@ -113,6 +113,10 @@ class Actions:
         self.call_method_on_tracks(data, CLIP_TRACK, "new_clip")
 
     def looper_control(self, data):
+        self.__parent.send_message(data.data1)
+        self.__parent.send_message(data.data2)
+        self.__parent.send_message(data.data3)
+        self.__parent.send_message(data.data4)
         self.call_method_on_tracks(data, LOOPER_TRACK, LOOPER_ACTIONS.get(data.data2), data.data3)
 
     ##### BANKING ACTIONS #####
@@ -131,7 +135,7 @@ class Actions:
         self.check_arm_conflicts(data)
         data.bank = data.looper_num
         if self.song.is_playing:
-            self.__parent.send_sysex(data.looper_num, CHANGE_BANK_COMMAND, data.looper_num)
+            self.__parent.send_sysex(CHANGE_BANK_COMMAND,data.looper_num, data.looper_num)
         self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
 
     def check_arm_conflicts(self, data):
@@ -266,7 +270,7 @@ class Actions:
         for tracks in self.tracks.values():
             for track in tracks:
                 track.change_mode()
-        self.__parent.send_sysex(0, CHANGE_MODE_COMMAND, self.state.mode)
+        self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0, self.state.mode)
 
 
     def execute_tempo_change(self):
