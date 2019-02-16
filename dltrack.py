@@ -43,26 +43,26 @@ class DlTrack(Track):
 
     def request_control(self, controlNum):
         self.send_message("Requesting control: ")
-        self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, REQUEST_NOTE, (self.trackNum * NUM_CONTROLS) + controlNum)
+        self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, NOTE_TYPE, (self.trackNum * NUM_CONTROLS) + controlNum)
 
     def record(self, quantized):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
-        if not quantized:
-            if self.lastState == RECORDING_STATE:
-                self.state.value = STOP_STATE
-                self.calculateBPM(time() - self.rectime)
-            elif self.lastState == CLEAR_STATE:
-                self.update_state(RECORDING_STATE)
-                self.rectime = time()
-                self.state.value = RECORDING_STATE
-            elif self.lastState == STOP_STATE:
-                self.state.value = PLAYING_STATE
-        else:
-            if self.rectime == 0 or (time() - self.rectime) > .5:
-                self.send_message("rectime: " + str(time() - self.rectime))
-                self.rectime = time()
-                self.request_control(RECORD_CONTROL)
+        # if not quantized:
+        #     if self.lastState == RECORDING_STATE:
+        #         self.state.value = STOP_STATE
+        #         self.calculateBPM(time() - self.rectime)
+        #     elif self.lastState == CLEAR_STATE:
+        #         self.update_state(RECORDING_STATE)
+        #         self.rectime = time()
+        #         self.state.value = RECORDING_STATE
+        #     elif self.lastState == STOP_STATE:
+        #         self.state.value = PLAYING_STATE
+        # else:
+        #     if self.rectime == 0 or (time() - self.rectime) > .5:
+        #         self.send_message("rectime: " + str(time() - self.rectime))
+        #         self.rectime = time()
+        self.request_control(RECORD_CONTROL)
 
     def play(self, quantized):
         if self.lastState == STOP_STATE:
@@ -98,7 +98,7 @@ class DlTrack(Track):
         elif self.lastState == PLAYING_STATE:
             self.request_control(STOP_CONTROL)
 
-    def undo(self):
+    def undo(self, quantized):
         if self.lastState != CLEAR_STATE or not self.song.is_playing:
             self.request_control(UNDO_CONTROL)
 
