@@ -40,30 +40,22 @@ class Actions:
 
     def call_method_on_tracks(self, data, track_type, method_name, *args):
         tracks = self.tracks.get(str(data.data1-1))
-        self.__parent.send_message(str(tracks))
         if tracks is not None:
             for track in tracks:
                 if isinstance(track, self.get_looper_type(track_type)):
+                    self.__parent.send_message(track.trackNum)
                     getattr(track, method_name)(*args)
 
-    def call_method_on_bank(self, data, track_type, method_name, *args):
-        if data.mode == self.state.mode:
-            x = 0
-            while x < 3:
-                tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (data.bank * NUM_TRACKS) + x))
-                if tracks is not None:
-                    for track in tracks:
-                        if isinstance(track, self.get_looper_type(track_type)):
-                            getattr(track, method_name)(*args)
-                x += 1
+    def call_method_on_all_tracks(self, track_type, method_name, *args):
+        self.__parent.send_message("track type:")
+        self.__parent.send_message(str(track_type))
 
-    def call_method_on_all_tracks(self, data, track_type, method_name, *args):
-        if data.mode == self.state.mode:
-            for tracks in self.tracks.values():
-                for track in tracks:
-                    self.__parent.send_message("track name: " + str(track.trackNum))
-                    if isinstance(track, self.get_looper_type(track_type)):
-                        getattr(track, method_name)(*args)
+        self.__parent.send_message(str(self.get_looper_type(track_type)))
+        for tracks in self.tracks.values():
+            for track in tracks:
+                self.__parent.send_message("track name: " + str(track.trackNum))
+                if isinstance(track, self.get_looper_type(track_type)):
+                    getattr(track, method_name)(*args)
 
     def check_uniform_state(self, state):
         for tracks in self.tracks.values():
@@ -84,27 +76,18 @@ class Actions:
 
     ##### TRACK ACTIONS #####
 
-    def record(self, data):
-        self.__parent.send_message("looping recrod")
-        self.__parent.send_message(str(data))
-        # If datalooper is in 'unquantized stop' state, turn on the metronome and jump to the downbeat
-        if self.state.unquantized_stop:
-            self.song.metronome = self.state.metro
-            self.jump_to_next_bar(False)
-            self.state.unquantized_stop = False
-
-            # set record to unquantized
-            data.data2 = False
-        self.call_method_on_tracks(data, data.data1, "record", data.data2)
-
-    def stop(self, data):
-        self.call_method_on_tracks(data, data.data1, "stop", data.data2)
-
-    def undo(self, data):
-        self.call_method_on_tracks(data, data.data1, "undo")
-
-    def clear(self, data):
-        self.call_method_on_tracks(data, data.data1, "clear", data.data2)
+    # def record(self, data):
+    #     self.__parent.send_message("looping recrod")
+    #     self.__parent.send_message(str(data))
+    #     # If datalooper is in 'unquantized stop' state, turn on the metronome and jump to the downbeat
+    #     if self.state.unquantized_stop:
+    #         self.song.metronome = self.state.metro
+    #         self.jump_to_next_bar(False)
+    #         self.state.unquantized_stop = False
+    #
+    #         # set record to unquantized
+    #         data.data2 = False
+    #     self.call_method_on_tracks(data, data.data1, "record", data.data2)
 
     def mute(self, data):
         self.call_method_on_tracks(data, data.data1, "mute", data.data2)
@@ -113,22 +96,26 @@ class Actions:
         self.call_method_on_tracks(data, CLIP_TRACK, "new_clip")
 
     def looper_control(self, data):
-        self.__parent.send_message(data.data1)
-        self.__parent.send_message(data.data2)
-        self.__parent.send_message(data.data3)
-        self.__parent.send_message(data.data4)
-        self.call_method_on_tracks(data, LOOPER_TRACK, LOOPER_ACTIONS.get(data.data2), data.data3)
+        #data1 = looper #, 0 is all
+        #data2 = looper action (rec, stop, undo, clear, mute, get new slot)
+        #data3 = quantize action?
+        #data4 = looper type (CL# or DL#)
+
+        if data.data1 == 0:
+            self.call_method_on_all_tracks(data.data4, LOOPER_ACTIONS.get(data.data2), data.data3)
+        else:
+            self.call_method_on_tracks(data, data.data4, LOOPER_ACTIONS.get(data.data2), data.data3)
 
     ##### BANKING ACTIONS #####
 
-    def bank(self, data):
-        if data.data1 != 1:
-            self.update_bank(data)
-        else:
-            self.__parent.send_message("checking if track is clear")
-            self.__parent.send_message(str(self.tracks.get(self.get_track_num_str(data))))
-            if self.check_track_clear(self.tracks.get(self.get_track_num_str(data))):
-                self.update_bank(data)
+    # def bank(self, data):
+    #     if data.data1 != 1:
+    #         self.update_bank(data)
+    #     else:
+    #         self.__parent.send_message("checking if track is clear")
+    #         self.__parent.send_message(str(self.tracks.get(self.get_track_num_str(data))))
+    #         if self.check_track_clear(self.tracks.get(self.get_track_num_str(data))):
+    #             self.update_bank(data)
 
     def update_bank(self, data):
         self.__parent.send_message("updating bank: " + str(data.looper_num))
@@ -154,42 +141,7 @@ class Actions:
                             new_track.track.arm = True
             x += 1
 
-    def change_instance(self, data):
-        pass
-
-    ##### EFFECT ALL TRACKS ON BANK ACTIONS #####
-
-    def record_bank(self, data):
-        self.call_method_on_bank(data, data.data1, "record")
-
-    def stop_bank(self, data):
-        self.call_method_on_bank(data, data.data1, "stop")
-
-    def undo_bank(self, data):
-        self.call_method_on_bank(data, data.data1, "undo")
-
-    def clear_bank(self, data):
-        self.call_method_on_bank(data, data.data1, "clear")
-
-    def start_bank(self, data):
-        self.call_method_on_bank(data, data.data1, "start", data.data2)
-
-    def mute_bank(self, data):
-        self.call_method_on_bank(data, data.data1, "mute", data.data2)
-
     ##### EFFECT ALL DATALOOPER TRACKS ACTIONS #####
-
-    def record_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "record")
-
-    def stop_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "stop", data.data2)
-
-    def undo_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "undo")
-
-    def clear_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "clear", data.data2)
 
     def start_all(self, data):
         self.call_method_on_all_tracks(data, data.data1, "start", data.data2)
@@ -198,12 +150,15 @@ class Actions:
         self.call_method_on_all_tracks(data, data.data1, "mute", data.data2)
 
     def toggle_stop_start(self, data):
+        self.__parent.send_message("toggling stop/start")
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
-            self.call_method_on_all_tracks(data, data.data1, "start", data.data2)
+            self.__parent.send_message("toggling start")
+            self.call_method_on_all_tracks(data.data1, "start", data.data2)
             if data.data2 == 0:
                 self.jump_to_next_bar(False)
         else:
-            self.call_method_on_all_tracks(data, data.data1, "stop", data.data2)
+            self.__parent.send_message("toggling stop")
+            self.call_method_on_all_tracks(data.data1, "stop", data.data2)
 
     def new_clips_on_all(self, data):
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
@@ -265,12 +220,12 @@ class Actions:
         self.state.change_mode(data.data1)
         self.call_method_on_all_tracks(data, BOTH_TRACK_TYPES, "change_mode")
 
-    def update_mode(self, mode):
-        self.state.mode = mode
-        for tracks in self.tracks.values():
-            for track in tracks:
-                track.change_mode()
-        self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0, self.state.mode)
+    # def update_mode(self, mode):
+    #     self.state.mode = mode
+    #     for tracks in self.tracks.values():
+    #         for track in tracks:
+    #             track.change_mode()
+    #     self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0, self.state.mode)
 
 
     def execute_tempo_change(self):

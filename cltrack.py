@@ -13,8 +13,8 @@ class ClTrack(Track):
         self.lastClip = -1
         self.clipStopping = False
         self.ignoreState = False
-        self.mutedClipSlot = -1
-
+        self.mutedClip = -1
+        self.muteTimer = Live.Base.Timer(callback=self.on_mute_timer, interval=1, repeat=False)
 
         # add listeners
         if not track.fired_slot_index_has_listener(self.on_slot_fired):
@@ -25,8 +25,6 @@ class ClTrack(Track):
         self.update_state(self.lastState)
 
     ###### HELPER METHODS ######
-
-
 
     # manages clip listeners and loads the first empty clip slot location into memory
     def get_new_clip_slot(self, new_scene):
@@ -144,13 +142,22 @@ class ClTrack(Track):
             clip_slot = self.track.clip_slots[self.track.playing_slot_index]
             if clip_slot.clip.is_recording:
                 self.clipSlot.delete_clip()
-
             if self.clipSlot == clip_slot and quantized and self.clipSlot.has_clip:
                 self.clipStopping = True
                 clip_slot.clip.stop()
             elif clip_slot.has_clip:
+                self.send_message("muting")
+                clip_slot.clip.add_muted_listener(self.clip_muted)
                 clip_slot.clip.muted = True
-                self.mutedClipSlot = clip_slot
+                self.mutedClip = clip_slot.clip
+
+    def clip_muted(self):
+        self.muteTimer.start()
+
+    def on_mute_timer(self):
+        self.mutedClip.remove_muted_listener(self.clip_muted)
+        self.mutedClip.muted = False
+        self.mutedClip = -1
 
     def toggle_playback(self):
         if self.clipSlot != -1 and self.clipSlot.has_clip:
@@ -167,19 +174,20 @@ class ClTrack(Track):
 
     def clear(self, clearType):
         self.send_message("clearing...")
-        if clearType == DELETE_CLIP:
-            self.remove_clip()
-        elif clearType == NEW_SCENE_KEEP_PLAYING:
-            self.get_new_clip_slot(True)
-        elif clearType == NEW_SCENE_STOP:
-            self.stop(False)
-            self.get_new_clip_slot(True)
-        elif clearType == STOP_CLIP:
-            self.stop(False)
-        self.__parent.send_message("clear pressed")
-        if self.clipSlot != -1 and self.clipSlot.has_clip:
-            self.remove_clip()
-        self.__parent.send_message("Clearing Clip")
+        self.remove_clip()
+        # if clearType == DELETE_CLIP:
+        #
+        # elif clearType == NEW_SCENE_KEEP_PLAYING:
+        #     self.get_new_clip_slot(True)
+        # elif clearType == NEW_SCENE_STOP:
+        #     self.stop(False)
+        #     self.get_new_clip_slot(True)
+        # elif clearType == STOP_CLIP:
+        #     self.stop(False)
+        # self.__parent.send_message("clear pressed")
+        # if self.clipSlot != -1 and self.clipSlot.has_clip:
+        #     self.remove_clip()
+        # self.__parent.send_message("Clearing Clip")
 
     def remove_clip(self):
         self.remove_listeners()
@@ -191,8 +199,12 @@ class ClTrack(Track):
         if self.clipSlot != -1:
             if self.clipSlot.has_clip_has_listener(self.on_clip_change):
                 self.clipSlot.remove_has_clip_listener(self.on_clip_change)
-            if self.clipSlot.has_clip and self.clipSlot.clip.is_recording:
+            if self.clipSlot.has_clip and self.clipSlot.clip.is_recording and not self.clipSlot.clip.is_overdubbing:
                 self.clipSlot.delete_clip()
+            elif self.clipSlot.has_clip and self.clipSlot.clip.is_overdubbing:
+                self.clipSlot.clip.add_muted_listener(self.clip_muted)
+                self.clipSlot.clip.muted = True
+                self.mutedClip = self.clipSlot.clip
             self.clipSlot = -1
             self.update_state(CLEAR_STATE)
 

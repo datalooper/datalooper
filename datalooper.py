@@ -40,9 +40,6 @@ class DataLooper(ControlSurface):
         self.__track_handler.scan_tracks()
         # initializes base obj
         self.live = Live.Application.get_application()
-        path = os.path.dirname(os.path.realpath(__file__)) + '/commands.json'
-        with open(path, "r") as read_file:
-           data = json.load(read_file)
 
         self.sysex(0x00, 0x01)
 
@@ -89,7 +86,7 @@ class DataLooper(ControlSurface):
     def send_sysex(self, *data):
         # self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
         looper_status_sysex = (0xF0, 0x1E) + data + (0xF7,)
-        self.send_message(looper_status_sysex);
+        self.send_message(looper_status_sysex)
         self.send_midi(looper_status_sysex)
 
     def send_program_change(self, program):
@@ -123,7 +120,7 @@ class DataLooper(ControlSurface):
             1: "looper_control",
             2: "auto_scanning_clip_control",
             3: "fixed_clip_control",
-            4: "start_stop_all",
+            4: "toggle_stop_start",
             6: "transport_control",
             7: "scene_control",
             8: "change_mode",

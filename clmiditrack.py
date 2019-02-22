@@ -17,9 +17,6 @@ class ClMidiTrack(cltrack.ClTrack):
     # 4. Clip is already in memory and recording, meaning clip will play
     #################
     def record(self, quantized):
-        if self.mutedClipSlot != -1 and self.mutedClipSlot.has_clip:
-            self.mutedClipSlot.clip.muted = False
-            self.mutedClipSlot = -1
         self.__parent.send_message("in record pressed")
         if self.clipSlot == -1:
             self.__parent.send_message("starting recording in new slot")

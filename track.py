@@ -58,6 +58,10 @@ class Track(object):
 
     def update_state(self, state):
         self.send_message("updating state")
+        self.send_message("trackNum= ")
+        self.send_message(self.trackNum)
+        self.send_message("Track name:")
+        self.send_message(self.track.name)
         if state != -1:
             self.lastState = state
         self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.trackNum, self.lastState)

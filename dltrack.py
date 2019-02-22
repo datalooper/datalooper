@@ -48,21 +48,21 @@ class DlTrack(Track):
     def record(self, quantized):
         self.__parent.send_message(
             "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
-        # if not quantized:
-        #     if self.lastState == RECORDING_STATE:
-        #         self.state.value = STOP_STATE
-        #         self.calculateBPM(time() - self.rectime)
-        #     elif self.lastState == CLEAR_STATE:
-        #         self.update_state(RECORDING_STATE)
-        #         self.rectime = time()
-        #         self.state.value = RECORDING_STATE
-        #     elif self.lastState == STOP_STATE:
-        #         self.state.value = PLAYING_STATE
-        # else:
-        #     if self.rectime == 0 or (time() - self.rectime) > .5:
-        #         self.send_message("rectime: " + str(time() - self.rectime))
-        #         self.rectime = time()
-        self.request_control(RECORD_CONTROL)
+        if not quantized:
+            if self.lastState == RECORDING_STATE:
+                self.state.value = STOP_STATE
+                self.calculateBPM(time() - self.rectime)
+            elif self.lastState == CLEAR_STATE:
+                self.update_state(RECORDING_STATE)
+                self.rectime = time()
+                self.state.value = RECORDING_STATE
+            elif self.lastState == STOP_STATE:
+                self.state.value = PLAYING_STATE
+        else:
+            if self.rectime == 0 or (time() - self.rectime) > .5:
+                self.send_message("rectime: " + str(time() - self.rectime))
+                self.rectime = time()
+                self.request_control(RECORD_CONTROL)
 
     def play(self, quantized):
         if self.lastState == STOP_STATE:

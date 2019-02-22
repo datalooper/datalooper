@@ -96,5 +96,6 @@ LOOPER_ACTIONS = {
     1 : 'stop',
     2 : 'undo',
     3 : 'clear',
-    4 : 'toggle_mute'
+    4 : 'toggle_mute',
+    5 : 'get_new_clip_slot'
 }

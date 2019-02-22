@@ -48,20 +48,22 @@ class TrackHandler:
             # adds name change listener to all tracks
             if not track.name_has_listener(self.__parent.on_track_name_changed):
                 track.add_name_listener(self.__parent.on_track_name_changed)
-        self.clear_unused_tracks(track_nums)
 
-    def clear_unused_tracks(self, track_nums):
-        # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
-        i = 0
-        while i < NUM_TRACKS:
-            if i not in track_nums:
-                self.__parent.send_sysex(CHANGE_STATE_COMMAND,i, CLEAR_STATE)
-            i += 1
+    # def clear_unused_tracks(self, track_nums):
+    #     # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
+    #     i = 0
+    #     while i < NUM_TRACKS:
+    #         if i not in track_nums:
+    #             self.__parent.send_sysex(CHANGE_STATE_COMMAND,i, CLEAR_STATE)
+    #         i += 1
 
     def clear_tracks(self):
         for trackNums in self.tracks.values():
             for track in trackNums:
-                track.remove_track()
+                self.send_message("trackname")
+                self.send_message(track.track in self.song.tracks)
+                if track.track in self.song.tracks:
+                    track.remove_track()
         self.tracks.clear()
 
     def append_tracks(self, track, trackNum, track_key):
