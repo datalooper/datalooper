@@ -76,22 +76,6 @@ class Actions:
 
     ##### TRACK ACTIONS #####
 
-    # def record(self, data):
-    #     self.__parent.send_message("looping recrod")
-    #     self.__parent.send_message(str(data))
-    #     # If datalooper is in 'unquantized stop' state, turn on the metronome and jump to the downbeat
-    #     if self.state.unquantized_stop:
-    #         self.song.metronome = self.state.metro
-    #         self.jump_to_next_bar(False)
-    #         self.state.unquantized_stop = False
-    #
-    #         # set record to unquantized
-    #         data.data2 = False
-    #     self.call_method_on_tracks(data, data.data1, "record", data.data2)
-
-    def mute(self, data):
-        self.call_method_on_tracks(data, data.data1, "mute", data.data2)
-
     def new_clip(self, data):
         self.call_method_on_tracks(data, CLIP_TRACK, "new_clip")
 
@@ -108,46 +92,31 @@ class Actions:
 
     ##### BANKING ACTIONS #####
 
-    # def bank(self, data):
-    #     if data.data1 != 1:
-    #         self.update_bank(data)
-    #     else:
-    #         self.__parent.send_message("checking if track is clear")
-    #         self.__parent.send_message(str(self.tracks.get(self.get_track_num_str(data))))
-    #         if self.check_track_clear(self.tracks.get(self.get_track_num_str(data))):
-    #             self.update_bank(data)
-
-    def update_bank(self, data):
-        self.__parent.send_message("updating bank: " + str(data.looper_num))
-        self.check_arm_conflicts(data)
-        data.bank = data.looper_num
-        if self.song.is_playing:
-            self.__parent.send_sysex(CHANGE_BANK_COMMAND,data.looper_num, data.looper_num)
-        self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
-
-    def check_arm_conflicts(self, data):
-        old_bank = data.bank
-        new_bank = data.looper_num
-        x = 0
-        while x < 3:
-            new_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (new_bank * NUM_TRACKS) + x))
-            old_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (old_bank * NUM_TRACKS) + x))
-            if old_tracks is not None:
-                for old_track in old_tracks:
-                    if new_tracks is not None:
-                        for new_track in new_tracks:
-                            if new_track.track.input_routing_type.display_name == old_track.track.input_routing_type.display_name:
-                                old_track.track.arm = False
-                            new_track.track.arm = True
-            x += 1
+    # def update_bank(self, data):
+    #     self.__parent.send_message("updating bank: " + str(data.looper_num))
+    #     self.check_arm_conflicts(data)
+    #     data.bank = data.looper_num
+    #     if self.song.is_playing:
+    #         self.__parent.send_sysex(CHANGE_BANK_COMMAND,data.looper_num, data.looper_num)
+    #     self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
+    #
+    # def check_arm_conflicts(self, data):
+    #     old_bank = data.bank
+    #     new_bank = data.looper_num
+    #     x = 0
+    #     while x < 3:
+    #         new_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (new_bank * NUM_TRACKS) + x))
+    #         old_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (old_bank * NUM_TRACKS) + x))
+    #         if old_tracks is not None:
+    #             for old_track in old_tracks:
+    #                 if new_tracks is not None:
+    #                     for new_track in new_tracks:
+    #                         if new_track.track.input_routing_type.display_name == old_track.track.input_routing_type.display_name:
+    #                             old_track.track.arm = False
+    #                         new_track.track.arm = True
+    #         x += 1
 
     ##### EFFECT ALL DATALOOPER TRACKS ACTIONS #####
-
-    def start_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "start", data.data2)
-
-    def mute_all(self, data):
-        self.call_method_on_all_tracks(data, data.data1, "mute", data.data2)
 
     def toggle_stop_start(self, data):
         self.__parent.send_message("toggling stop/start")
