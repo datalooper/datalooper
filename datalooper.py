@@ -124,5 +124,6 @@ class DataLooper(ControlSurface):
             7: "scene_control",
             8: "change_mode",
             9: "change_bank",
+            10: "tap_tempo"
         }
         return action_map.get(argument, "Invalid Action")

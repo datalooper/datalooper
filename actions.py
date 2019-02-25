@@ -182,7 +182,7 @@ class Actions:
 
     def change_mode(self, data):
         self.state.change_mode(data.data1)
-        self.call_method_on_all_tracks(data, BOTH_TRACK_TYPES, "change_mode")
+        self.__parent.send_message("mode change to: " + str(data.data1))
 
     # def update_mode(self, mode):
     #     self.state.mode = mode

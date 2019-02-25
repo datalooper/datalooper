@@ -23,6 +23,7 @@ class State:
         self.mode = mode
         if mode == LOOPER_MODE:
             self.song.metronome = self.metro
+            self.tap_tempo_counter = 0
         elif mode == NEW_SESSION_MODE:
             self.metro = self.song.metronome
             self.song.metronome = 0
