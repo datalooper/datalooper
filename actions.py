@@ -43,17 +43,12 @@ class Actions:
         if tracks is not None:
             for track in tracks:
                 if isinstance(track, self.get_looper_type(track_type)):
-                    self.__parent.send_message(track.trackNum)
+                    self.__parent.send_message("calling method on track name: " + track.track.name + " track num: " + str(track.trackNum))
                     getattr(track, method_name)(*args)
 
     def call_method_on_all_tracks(self, track_type, method_name, *args):
-        self.__parent.send_message("track type:")
-        self.__parent.send_message(str(track_type))
-
-        self.__parent.send_message(str(self.get_looper_type(track_type)))
         for tracks in self.tracks.values():
             for track in tracks:
-                self.__parent.send_message("track name: " + str(track.trackNum))
                 if isinstance(track, self.get_looper_type(track_type)):
                     getattr(track, method_name)(*args)
 

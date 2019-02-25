@@ -58,15 +58,17 @@ class TrackHandler:
     #         i += 1
 
     def clear_tracks(self):
+        msg = "Removing Tracks: "
         for trackNums in self.tracks.values():
             for track in trackNums:
-                self.send_message("trackname")
-                self.send_message(track.track in self.song.tracks)
                 if track.track in self.song.tracks:
+                    msg += track.track.name + " "
                     track.remove_track()
         self.tracks.clear()
+        self.send_message(msg)
 
     def append_tracks(self, track, trackNum, track_key):
+        msg = "Adding tracks: "
         if track_key == DATALOOPER_KEY:
             # adds a listener to tracks detected as DataLoopers to rescan for looper when a devices is added
             if not track.devices_has_listener(self.scan_tracks):
@@ -75,17 +77,17 @@ class TrackHandler:
             if track.devices:
                 for device in track.devices:
                     if device.name == "Looper":
-                        self.send_message("adding looper track: " + str(trackNum))
+                        msg += track.name
                         self.tracks[str(trackNum)].append(DlTrack(self, track, device, trackNum, self.song, self.state, self.actions))
                     else:
                         self.send_message("Looper Device Does Not Exist on Track: " + track.name)
         elif track_key == CLIPLOOPER_KEY:
+            msg += track.name
             if track.has_midi_input:
-                self.send_message("adding clip midi track " + str(trackNum))
                 self.tracks[str(trackNum)].append(ClMidiTrack(self, track, trackNum, self.song, self.state, self.actions))
             elif track.has_audio_input:
-                self.send_message("adding clip audio track")
                 self.tracks[str(trackNum)].append(ClAudioTrack(self, track, trackNum, self.song, self.state, self.actions))
+        self.send_message(msg)
 
     def send_midi(self, midi):
         self.__parent.send_midi(midi)

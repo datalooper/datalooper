@@ -86,7 +86,7 @@ class DataLooper(ControlSurface):
     def send_sysex(self, *data):
         # self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
         looper_status_sysex = (0xF0, 0x1E) + data + (0xF7,)
-        self.send_message(looper_status_sysex)
+        #self.send_message(looper_status_sysex)
         self.send_midi(looper_status_sysex)
 
     def send_program_change(self, program):
@@ -101,9 +101,8 @@ class DataLooper(ControlSurface):
     def handle_sysex(self, midi_bytes):
 
         sysex = Sysex(midi_bytes)
-        self.send_message(self.get_method(sysex.action))
+        #self.send_message(self.get_method(sysex.action))
         getattr(self.__action_handler, self.get_method(sysex.action))(sysex)
-
 
     def refresh_state(self):
         """Live -> Script

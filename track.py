@@ -30,16 +30,13 @@ class Track(object):
         self.__parent.send_message(message)
 
     def stop(self, quantized):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + "stop pressed")
+        pass
 
-    def undo(self):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + "undo pressed")
+    def undo(self, quantized):
+        pass
 
     def clear(self, clear_type):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + "clear pressed")
+        pass
 
     def start(self, start_type):
         if self.lastState != CLEAR_STATE:
@@ -57,14 +54,11 @@ class Track(object):
                 self.track.mute = 1
 
     def update_state(self, state):
-        self.send_message("updating state")
-        self.send_message("trackNum= ")
-        self.send_message(self.trackNum)
-        self.send_message("Track name:")
-        self.send_message(self.track.name)
+
         if state != -1:
+            self.send_message("updating state on track num: " + str(self.trackNum) + " track name: " + self.track.name)
             self.lastState = state
-        self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.trackNum, self.lastState)
+            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.trackNum, self.lastState)
         # if self.trackNum not in self.__parent.duplicates or (
         #         self.trackNum in self.__parent.duplicates and "LED" in self.track.name):
         #     self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)

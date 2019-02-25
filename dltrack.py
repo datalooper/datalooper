@@ -35,7 +35,7 @@ class DlTrack(Track):
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
             return
 
-        self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
+        # self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
         self.update_state(int(self.state.value))
 
     def send_message(self, message):
@@ -46,8 +46,8 @@ class DlTrack(Track):
         self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, NOTE_TYPE, (self.trackNum * NUM_CONTROLS) + controlNum)
 
     def record(self, quantized):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
+        # self.__parent.send_message(
+        #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         if not quantized:
             if self.lastState == RECORDING_STATE:
                 self.state.value = STOP_STATE
@@ -60,13 +60,13 @@ class DlTrack(Track):
                 self.state.value = PLAYING_STATE
         else:
             if self.rectime == 0 or (time() - self.rectime) > .5:
-                self.send_message("rectime: " + str(time() - self.rectime))
+                # self.send_message("rectime: " + str(time() - self.rectime))
                 self.rectime = time()
                 self.request_control(RECORD_CONTROL)
 
     def play(self, quantized):
         if self.lastState == STOP_STATE:
-            self.send_message("attempting play")
+            # self.send_message("attempting play")
             if quantized:
                 self.request_control(RECORD_CONTROL)
             else:
@@ -74,8 +74,8 @@ class DlTrack(Track):
             self.update_state(PLAYING_STATE)
 
     def stop(self, quantized):
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
+        # self.__parent.send_message(
+        #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
         if self.lastState == RECORDING_STATE:
             self.update_state(CLEAR_STATE)
             self.request_control(CLEAR_CONTROL)
@@ -84,7 +84,7 @@ class DlTrack(Track):
             if quantized or not self.song.is_playing:
                 self.request_control(STOP_CONTROL)
             else:
-                self.send_message("entering stop state")
+                # self.send_message("entering stop state")
                 self.update_state(STOP_STATE)
                 self.state.value = STOP_STATE
 
@@ -102,13 +102,13 @@ class DlTrack(Track):
         if self.lastState != CLEAR_STATE or not self.song.is_playing:
             self.request_control(UNDO_CONTROL)
 
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
+        # self.__parent.send_message(
+        #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
 
     def clear(self, clearType):
         self.request_control(CLEAR_CONTROL)
-        self.__parent.send_message(
-            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " clear pressed")
+        # self.__parent.send_message(
+        #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " clear pressed")
         self.update_state(CLEAR_STATE)
 
     def calculateBPM(self, loop_length):
@@ -150,7 +150,7 @@ class DlTrack(Track):
             self.action_handler.update_mode(LOOPER_MODE)
 
     def remove_track(self):
-        if self.state.value_has_listener(self._on_looper_param_changed):
+        if self.device in self.track.devices and self.state.value_has_listener(self._on_looper_param_changed):
             self.state.remove_value_listener(self._on_looper_param_changed)
         if self.track.can_be_armed and self.track.arm_has_listener(self.set_arm):
             self.track.remove_arm_listener(self.set_arm)
