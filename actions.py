@@ -3,6 +3,7 @@ from cltrack import ClTrack
 from dltrack import DlTrack
 from track import Track
 import Live
+import math
 
 
 class Actions:
@@ -85,6 +86,39 @@ class Actions:
         else:
             self.call_method_on_tracks(data, data.data4, LOOPER_ACTIONS.get(data.data2), data.data3)
 
+    def clip_control(self, data):
+        # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
+
+        trackNum = int(data.data1 % 4 + self.state.trackOffset)
+        clipNum = int(math.floor(data.data1/4) + self.state.sceneOffset)
+        self.__parent.send_message("triggering clip on track : " + str(trackNum + self.state.trackOffset) + " clip number: " + str(clipNum + self.state.sceneOffset))
+        self.song.tracks[trackNum].clip_slots[clipNum].fire()
+
+    def scene_control(self, data):
+        self.song.scenes[data.data2 - 1].fire()
+
+    def request_state(self, data):
+        self.__parent.send_message("state requested")
+        if self.__parent.get_method(data.data2) == "scene_control":
+            scene = self.song.scenes[data.data3-1]
+            color = scene.color
+            scene.add_color_listener()
+            carray = self.get_color_array(color)
+            self.__parent.send_sysex(UPDATE_BUTTON_COLOR, data.data1, carray[0], carray[1], carray[2], carray[3],carray[4], carray[5])
+
+        # button #
+        self.__parent.send_message(data.data1)
+        # action #
+        self.__parent.send_message(data.data2)
+        # data #
+        self.__parent.send_message(data.data3)
+
+    def get_color_array(self, color):
+        blue = color & 255
+        green = (color >> 8) & 255
+        red = (color >> 16) & 255
+        return red >> 1, 1 & red, green >> 1, 1 & green, blue >> 1, 1 & blue
+
     ##### BANKING ACTIONS #####
 
     # def update_bank(self, data):
@@ -128,6 +162,19 @@ class Actions:
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
 
     ##### EFFECT ENTIRE SESSION #####
+
+    def move_session_highlight(self, data):
+        self.__parent.send_message("moving session highlight:" + str(data.data1))
+        if data.data1 == 0 and self.state.sceneOffset > 0:
+            self.state.sceneOffset -= 1
+        elif data.data1 == 1:
+            self.state.sceneOffset += 1
+        elif data.data1 == 2 and self.state.trackOffset > 0 :
+            self.state.trackOffset -= 1
+        elif data.data1 == 3:
+            self.state.trackOffset += 1
+        self.send_color_dump()
+        self.__parent._set_session_highlight(self.state.trackOffset, self.state.sceneOffset, 3, 3, False)
 
     def stop_all_playing_clips(self, data):
         self.song.stop_all_clips()
@@ -181,16 +228,25 @@ class Actions:
             self.tempo_change_timer.start()
 
     def change_mode(self, data):
-        self.state.change_mode(data.data1)
+        self.state.change_mode(self.__parent, data.data1)
         self.__parent.send_message("mode change to: " + str(data.data1))
 
-    # def update_mode(self, mode):
-    #     self.state.mode = mode
-    #     for tracks in self.tracks.values():
-    #         for track in tracks:
-    #             track.change_mode()
-    #     self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0, self.state.mode)
+        if self.state.mode == CLIP_LAUNCH_MODE:
+            self.send_color_dump()
 
+    def send_color_dump(self):
+        x0 = 0
+        y0 = 0
+        self.__parent.send_sysex(CLIP_COLOR_COMMAND, 127, 127, 0)
+        for x in range(self.state.trackOffset, self.state.trackOffset+3):
+            for y in range(self.state.sceneOffset, self.state.sceneOffset + 3):
+                if self.song.tracks[x].clip_slots[y].has_clip:
+                    color = self.song.tracks[x].clip_slots[y].clip.color
+                    carray = self.get_color_array(color)
+                    self.__parent.send_sysex(CLIP_COLOR_COMMAND, x0, y0, carray[0], carray[1], carray[2], carray[3], carray[4], carray[5])
+                y0+=1
+            x0+=1
+            y0 = 0
 
     def execute_tempo_change(self):
     # kills timer after 50ms just in case it wants to run forever for some reason

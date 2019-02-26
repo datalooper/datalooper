@@ -117,13 +117,14 @@ class DataLooper(ControlSurface):
         action_map = {
             0: "metronome_control",
             1: "looper_control",
-            2: "auto_scanning_clip_control",
-            3: "fixed_clip_control",
-            4: "toggle_stop_start",
+            2: "tap_tempo",
+            3: "clip_control",
+            5: "toggle_stop_start",
             6: "transport_control",
             7: "scene_control",
             8: "change_mode",
-            9: "change_bank",
-            10: "tap_tempo"
+            9: "change_instance",
+            10: "move_session_highlight",
+            11: "request_state"
         }
         return action_map.get(argument, "Invalid Action")
