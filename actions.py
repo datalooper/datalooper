@@ -4,7 +4,7 @@ from dltrack import DlTrack
 from track import Track
 import Live
 import math
-
+from scene import Scene
 
 class Actions:
 
@@ -15,6 +15,8 @@ class Actions:
         self.__parent = parent
         self.timerCounter = 0
         self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
+        self.scenes = []
+        self.song.add_scenes_listener(self.on_scene_change)
 
 
     ##### HELPER FUNCTIONS #####
@@ -95,23 +97,34 @@ class Actions:
         self.song.tracks[trackNum].clip_slots[clipNum].fire()
 
     def scene_control(self, data):
-        self.song.scenes[data.data2 - 1].fire()
+        self.song.scenes[data.data1-1].fire()
 
     def request_state(self, data):
         self.__parent.send_message("state requested")
-        if self.__parent.get_method(data.data2) == "scene_control":
-            scene = self.song.scenes[data.data3-1]
-            color = scene.color
-            scene.add_color_listener()
-            carray = self.get_color_array(color)
-            self.__parent.send_sysex(UPDATE_BUTTON_COLOR, data.data1, carray[0], carray[1], carray[2], carray[3],carray[4], carray[5])
-
+        method = self.__parent.get_method(data.data2)
+        if method == "scene_control":
+            linkedScene = self.is_scene_linked(data.data3-1, data.data1)
+            if not linkedScene:
+                newScene = Scene(data.data3-1, data.data1, self.song, self.state, self)
+                self.scenes.append(newScene)
+                newScene.request_state()
+            elif isinstance(linkedScene, Scene):
+                linkedScene.request_state()
+        elif method == "clip_control":
+            pass
         # button #
         self.__parent.send_message(data.data1)
         # action #
         self.__parent.send_message(data.data2)
         # data #
         self.__parent.send_message(data.data3)
+
+    def is_scene_linked(self, sceneNum, buttonNum):
+        for scene in self.scenes:
+            if scene.sceneNum == sceneNum and scene.buttonNum == buttonNum:
+                return scene
+
+        return False
 
     def get_color_array(self, color):
         blue = color & 255
@@ -162,6 +175,11 @@ class Actions:
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
 
     ##### EFFECT ENTIRE SESSION #####
+
+    def on_scene_change(self):
+        self.__parent.send_message("scene changed")
+        for x, scene in enumerate(self.scenes):
+            scene.init_listener()
 
     def move_session_highlight(self, data):
         self.__parent.send_message("moving session highlight:" + str(data.data1))
@@ -238,15 +256,19 @@ class Actions:
         x0 = 0
         y0 = 0
         self.__parent.send_sysex(CLIP_COLOR_COMMAND, 127, 127, 0)
-        for x in range(self.state.trackOffset, self.state.trackOffset+3):
-            for y in range(self.state.sceneOffset, self.state.sceneOffset + 3):
-                if self.song.tracks[x].clip_slots[y].has_clip:
-                    color = self.song.tracks[x].clip_slots[y].clip.color
+        for x in range(self.state.sceneOffset, self.state.sceneOffset+3):
+            for y in range(self.state.trackOffset, self.state.trackOffset + 3):
+                if self.song.tracks[y].clip_slots[x].has_clip:
+                    color = self.song.tracks[y].clip_slots[x].clip.color
                     carray = self.get_color_array(color)
-                    self.__parent.send_sysex(CLIP_COLOR_COMMAND, x0, y0, carray[0], carray[1], carray[2], carray[3], carray[4], carray[5])
+                    buttonNum = y0 + x0 * NUM_CONTROLS
+                    self.__parent.send_sysex(CLIP_COLOR_COMMAND, buttonNum, carray[0], carray[1], carray[2], carray[3], carray[4], carray[5])
                 y0+=1
             x0+=1
             y0 = 0
+
+    def send_sysex(self, *data):
+        self.__parent.send_sysex(*data)
 
     def execute_tempo_change(self):
     # kills timer after 50ms just in case it wants to run forever for some reason
@@ -256,3 +278,6 @@ class Actions:
             self.tempo_change_timer.stop()
         elif self.timerCounter > 50:
             self.tempo_change_timer.stop()
+
+    def send_message(self, m):
+        self.__parent.send_message(m)
