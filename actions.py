@@ -5,6 +5,7 @@ from track import Track
 import Live
 import math
 from scene import Scene
+from clip import Clip
 
 class Actions:
 
@@ -16,6 +17,7 @@ class Actions:
         self.timerCounter = 0
         self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
         self.scenes = []
+        self.clips = []
         self.song.add_scenes_listener(self.on_scene_change)
 
 
@@ -90,9 +92,12 @@ class Actions:
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
+        trackNum = data.data1
+        clipNum = data.data4
+        if self.state.mode == CLIP_LAUNCH_MODE:
+            trackNum += self.state.trackOffset
+            clipNum += self.state.sceneOffset
 
-        trackNum = int(data.data1 % 4 + self.state.trackOffset)
-        clipNum = int(math.floor(data.data1/4) + self.state.sceneOffset)
         self.__parent.send_message("triggering clip on track : " + str(trackNum + self.state.trackOffset) + " clip number: " + str(clipNum + self.state.sceneOffset))
         self.song.tracks[trackNum].clip_slots[clipNum].fire()
 
@@ -100,7 +105,6 @@ class Actions:
         self.song.scenes[data.data1-1].fire()
 
     def request_state(self, data):
-        self.__parent.send_message("state requested")
         method = self.__parent.get_method(data.data2)
         if method == "scene_control":
             linkedScene = self.is_scene_linked(data.data3-1, data.data1)
@@ -111,13 +115,26 @@ class Actions:
             elif isinstance(linkedScene, Scene):
                 linkedScene.request_state()
         elif method == "clip_control":
-            pass
-        # button #
-        self.__parent.send_message(data.data1)
-        # action #
-        self.__parent.send_message(data.data2)
-        # data #
-        self.__parent.send_message(data.data3)
+            linkedClip = self.is_clip_linked(data.data3-1, data.data4)
+            if not linkedClip:
+                newClip = Clip(data.data3, data.data6, data.data1, self.song, self.state, self)
+                self.clips.append(newClip)
+            elif isinstance(linkedClip, Clip):
+                linkedClip.request_state()
+
+        # # button #
+        # self.__parent.send_message(data.data1)
+        # # action #
+        # self.__parent.send_message(data.data2)
+        # # data #
+        # self.__parent.send_message(data.data3)
+
+    def is_clip_linked(self, trackNum, sceneNum):
+        for clip in self.clips:
+            if clip.trackNum == trackNum and clip.sceneNum == sceneNum:
+                return clip
+
+        return False
 
     def is_scene_linked(self, sceneNum, buttonNum):
         for scene in self.scenes:
@@ -127,10 +144,13 @@ class Actions:
         return False
 
     def get_color_array(self, color):
-        blue = color & 255
-        green = (color >> 8) & 255
-        red = (color >> 16) & 255
-        return red >> 1, 1 & red, green >> 1, 1 & green, blue >> 1, 1 & blue
+        if color is not None:
+            blue = color & 255
+            green = (color >> 8) & 255
+            red = (color >> 16) & 255
+            return red >> 1, 1 & red, green >> 1, 1 & green, blue >> 1, 1 & blue
+        else:
+            return None
 
     ##### BANKING ACTIONS #####
 
@@ -191,8 +211,11 @@ class Actions:
             self.state.trackOffset -= 1
         elif data.data1 == 3:
             self.state.trackOffset += 1
-        self.send_color_dump()
+        for clip in self.clips:
+            clip.init_listener()
+            clip.update_color()
         self.__parent._set_session_highlight(self.state.trackOffset, self.state.sceneOffset, 3, 3, False)
+
 
     def stop_all_playing_clips(self, data):
         self.song.stop_all_clips()
@@ -249,23 +272,22 @@ class Actions:
         self.state.change_mode(self.__parent, data.data1)
         self.__parent.send_message("mode change to: " + str(data.data1))
 
-        if self.state.mode == CLIP_LAUNCH_MODE:
-            self.send_color_dump()
 
     def send_color_dump(self):
-        x0 = 0
-        y0 = 0
-        self.__parent.send_sysex(CLIP_COLOR_COMMAND, 127, 127, 0)
-        for x in range(self.state.sceneOffset, self.state.sceneOffset+3):
-            for y in range(self.state.trackOffset, self.state.trackOffset + 3):
-                if self.song.tracks[y].clip_slots[x].has_clip:
-                    color = self.song.tracks[y].clip_slots[x].clip.color
-                    carray = self.get_color_array(color)
-                    buttonNum = y0 + x0 * NUM_CONTROLS
-                    self.__parent.send_sysex(CLIP_COLOR_COMMAND, buttonNum, carray[0], carray[1], carray[2], carray[3], carray[4], carray[5])
-                y0+=1
-            x0+=1
-            y0 = 0
+        pass
+        # x0 = 0
+        # y0 = 0
+        # self.__parent.send_sysex(CLIP_COLOR_COMMAND, 127, 127, 0)
+        # for x in range(self.state.sceneOffset, self.state.sceneOffset+3):
+        #     for y in range(self.state.trackOffset, self.state.trackOffset + 3):
+        #         if self.song.tracks[y].clip_slots[x].has_clip:
+        #             color = self.song.tracks[y].clip_slots[x].clip.color
+        #             carray = self.get_color_array(color)
+        #             buttonNum = y0 + x0 * NUM_CONTROLS
+        #             self.__parent.send_sysex(CLIP_COLOR_COMMAND, buttonNum, carray[0], carray[1], carray[2], carray[3], carray[4], carray[5])
+        #         y0+=1
+        #     x0+=1
+        #     y0 = 0
 
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)
