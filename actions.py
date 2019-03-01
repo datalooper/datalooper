@@ -92,14 +92,17 @@ class Actions:
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
-        trackNum = data.data1
-        clipNum = data.data4
+        trackNum = data.data1 - 1
+        sceneNum = data.data4 - 1
+
         if self.state.mode == CLIP_LAUNCH_MODE:
             trackNum += self.state.trackOffset
-            clipNum += self.state.sceneOffset
+            sceneNum += self.state.sceneOffset
 
-        self.__parent.send_message("triggering clip on track : " + str(trackNum + self.state.trackOffset) + " clip number: " + str(clipNum + self.state.sceneOffset))
-        self.song.tracks[trackNum].clip_slots[clipNum].fire()
+        for clip in self.clips:
+            if clip.trackNum == trackNum and clip.sceneNum == sceneNum:
+                action = CLIP_ACTIONS.get(data.data2)
+                getattr(clip, action)(data)
 
     def scene_control(self, data):
         self.song.scenes[data.data1-1].fire()
@@ -117,7 +120,7 @@ class Actions:
         elif method == "clip_control":
             linkedClip = self.is_clip_linked(data.data3-1, data.data4)
             if not linkedClip:
-                newClip = Clip(data.data3, data.data6, data.data1, self.song, self.state, self)
+                newClip = Clip(data.data3-1, data.data6-1, data.data1, self.song, self.state, self)
                 self.clips.append(newClip)
             elif isinstance(linkedClip, Clip):
                 linkedClip.request_state()

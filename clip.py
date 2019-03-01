@@ -1,7 +1,8 @@
 from consts import *
+import Live
 
 
-class Clip:
+class Clip(object):
     def __init__(self, trackNum, sceneNum, buttonNum, song, state, parent):
         self.trackNum = trackNum
         self.sceneNum = sceneNum
@@ -10,6 +11,8 @@ class Clip:
         self.state = state
         self.__parent = parent
         self.init_listener()
+        self.muteTimer = Live.Base.Timer(callback=self.on_mute_timer, interval=1, repeat=False)
+
 
     def init_listener(self):
         if self.state.mode == CLIP_LAUNCH_MODE:
@@ -57,3 +60,38 @@ class Clip:
                 elif not clip_slot.has_clip:
                     self.__parent.send_sysex(UPDATE_BUTTON_COLOR, self.buttonNum, 0, 0, 0, 0, 0, 0)
                     self.__parent.send_message("clip slot no clip")
+
+    def record(self, data):
+        pass
+
+    def play(self, data):
+        self.__parent.send_message("triggering clip on track : " + str(self.trackNum + self.state.trackOffset) + " clip number: " + str(self.sceneNum + self.state.sceneOffset))
+        clip_slot = self.song.tracks[self.trackNum].clip_slots[self.sceneNum]
+        if clip_slot.has_clip:
+            self.song.tracks[self.trackNum].clip_slots[self.sceneNum].fire()
+        else:
+            self.__parent.send_message("cannot play, no clip in slot")
+
+    def stop(self, data):
+        clip_slot = self.song.tracks[self.trackNum].clip_slots[self.sceneNum]
+        self.__parent.send_message("stopping, data 3 = " + str(data.data3))
+        if data.data3 == 1:
+            clip_slot.stop()
+        elif clip_slot.has_clip:
+            if not clip_slot.clip.muted_has_listener(self.on_clip_muted):
+                clip_slot.clip.add_muted_listener(self.on_clip_muted)
+                clip_slot.clip.muted = True
+
+    def undo(self, data):
+        pass
+
+    def clear(self, data):
+        pass
+
+    def on_clip_muted(self):
+        self.muteTimer.start()
+
+    def on_mute_timer(self):
+        clip = self.song.tracks[self.trackNum].clip_slots[self.sceneNum].clip
+        clip.muted = False
+        clip.remove_muted_listener(self.on_clip_muted)

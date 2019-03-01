@@ -102,3 +102,11 @@ LOOPER_ACTIONS = {
     4 : 'toggle_mute',
     5 : 'get_new_clip_slot'
 }
+
+CLIP_ACTIONS = {
+    0 : 'record',
+    1 : 'stop',
+    2 : 'undo',
+    3 : 'clear',
+    4 : 'play'
+}
