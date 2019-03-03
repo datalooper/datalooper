@@ -4,7 +4,7 @@ from consts import *
 class State:
 
     def __init__(self, song):
-        self.metro = -1
+        self.metro = song.metronome
         self.curBeats = 0
         self.tap_tempo_counter = 0
         self.new_scene = False
@@ -16,7 +16,6 @@ class State:
         self.song = song
         self.sceneOffset = 0
         self.trackOffset = 0
-
 
     def updateBPM(self, bpm):
         self.bpm = bpm
@@ -33,7 +32,6 @@ class State:
             self.song.metronome = 0
         elif mode == CLIP_LAUNCH_MODE:
             parent._set_session_highlight(self.sceneOffset, self.trackOffset, 3, 3, False)
-
 
     def restore_metro(self):
         self.song.metronome = self.metro

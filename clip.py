@@ -11,18 +11,18 @@ class Clip(object):
         self.state = state
         self.__parent = parent
         self.init_listener()
+        self.playStatus = -1
         self.muteTimer = Live.Base.Timer(callback=self.on_mute_timer, interval=1, repeat=False)
 
-
     def init_listener(self):
+        trackNum = self.trackNum
+        sceneNum = self.sceneNum
         if self.state.mode == CLIP_LAUNCH_MODE:
-            trackNum = self.trackNum + self.state.trackOffset
-            sceneNum = self.sceneNum + self.state.sceneOffset
-        else:
-            trackNum = self.trackNum
-            sceneNum = self.sceneNum
+            trackNum += self.state.trackOffset
+            sceneNum += self.state.sceneOffset
 
-        if not self.song.tracks[trackNum].clip_slots[sceneNum].clip.color_has_listener(self.on_color_change):
+        clip_slot = self.song.tracks[trackNum].clip_slots[sceneNum]
+        if clip_slot.has_clip and not clip_slot.clip.color_has_listener(self.on_color_change):
             self.song.tracks[trackNum].clip_slots[sceneNum].clip.add_color_listener(self.on_color_change)
         else:
             self.__parent.send_message("listener already added")
@@ -36,12 +36,11 @@ class Clip(object):
         self.update_color()
 
     def update_color(self):
+        trackNum = self.trackNum
+        sceneNum = self.sceneNum
         if self.state.mode == CLIP_LAUNCH_MODE:
-            trackNum = self.trackNum + self.state.trackOffset
-            sceneNum = self.sceneNum + self.state.sceneOffset
-        else:
-            trackNum = self.trackNum
-            sceneNum = self.sceneNum
+            trackNum += self.state.trackOffset
+            sceneNum += self.state.sceneOffset
 
         self.__parent.send_message("color array update button: " + str(self.buttonNum) + " trackNum: " + str(trackNum) + " sceneNum: " + str(sceneNum))
         if len(self.song.tracks) >= trackNum :
@@ -68,7 +67,12 @@ class Clip(object):
         self.__parent.send_message("triggering clip on track : " + str(self.trackNum + self.state.trackOffset) + " clip number: " + str(self.sceneNum + self.state.sceneOffset))
         clip_slot = self.song.tracks[self.trackNum].clip_slots[self.sceneNum]
         if clip_slot.has_clip:
-            self.song.tracks[self.trackNum].clip_slots[self.sceneNum].fire()
+            self.playStatus = clip_slot.clip.is_playing
+            self.__parent.send_message("playing status: " + str(clip_slot.clip.is_playing))
+            if not clip_slot.clip.playing_status_has_listener(self.on_clip_play_status_changed):
+                clip_slot.clip.add_playing_status_listener(self.on_clip_play_status_changed)
+            clip_slot.fire()
+            self.__parent.send_sysex(BLINK, self.buttonNum, BlinkTypes.FAST_BLINK)
         else:
             self.__parent.send_message("cannot play, no clip in slot")
 
@@ -77,6 +81,7 @@ class Clip(object):
         self.__parent.send_message("stopping, data 3 = " + str(data.data3))
         if data.data3 == 1:
             clip_slot.stop()
+            self.__parent.send_sysex(BLINK, self.buttonNum, BlinkTypes.FAST_BLINK)
         elif clip_slot.has_clip:
             if not clip_slot.clip.muted_has_listener(self.on_clip_muted):
                 clip_slot.clip.add_muted_listener(self.on_clip_muted)
@@ -95,3 +100,22 @@ class Clip(object):
         clip = self.song.tracks[self.trackNum].clip_slots[self.sceneNum].clip
         clip.muted = False
         clip.remove_muted_listener(self.on_clip_muted)
+
+    def on_clip_play_status_changed(self):
+        clip_slot = self.song.tracks[self.trackNum].clip_slots[self.sceneNum]
+        clip = clip_slot.clip
+        # if clip.playing_status_has_listener(self.on_clip_play_status_changed):
+        #     clip.remove_playing_status_listener(self.on_clip_play_status_changed)
+        self.__parent.send_message("is playing: " + str(clip.is_playing))
+
+        if clip_slot.clip.is_playing != self.playStatus:
+            self.playStatus = clip.is_playing
+            if self.playStatus is True:
+                self.__parent.send_message("slow blink")
+                self.__parent.send_sysex(BLINK, self.buttonNum, BlinkTypes.SLOW_BLINK)
+            elif self.playStatus is False and not clip.is_triggered:
+                self.__parent.send_message("no blink")
+                self.__parent.send_sysex(BLINK, self.buttonNum, BlinkTypes.NO_BLINK)
+            elif self.playStatus is False and clip.is_triggered:
+                self.__parent.send_sysex(BLINK, self.buttonNum, BlinkTypes.FAST_BLINK)
+

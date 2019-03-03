@@ -105,7 +105,8 @@ class DlTrack(Track):
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
 
-    def clear(self, clearType):
+    def clear_immediately(self, data):
+        super(DlTrack, self).clear_immediately(data)
         self.request_control(CLEAR_CONTROL)
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " clear pressed")
@@ -154,3 +155,5 @@ class DlTrack(Track):
             self.state.remove_value_listener(self._on_looper_param_changed)
         if self.track.can_be_armed and self.track.arm_has_listener(self.set_arm):
             self.track.remove_arm_listener(self.set_arm)
+
+

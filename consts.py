@@ -16,8 +16,8 @@ REQUEST_CONTROL_COMMAND = 2
 DOWNBEAT_COMMAND = 3
 CLIP_COLOR_COMMAND = 4
 UPDATE_BUTTON_COLOR = 5
+BLINK = 6
 CHANGE_BANK_COMMAND = 7
-
 NOTE_TYPE = 0
 
 DATALOOPER_KEY = 'DL#'
@@ -95,13 +95,18 @@ NEW_SCENE_STOP = 2
 STOP_CLIP = 3
 
 LOOPER_ACTIONS = {
-    0 : 'record',
-    1 : 'stop',
-    2 : 'undo',
-    3 : 'clear',
-    4 : 'toggle_mute',
-    5 : 'get_new_clip_slot'
+    0 : 'record_quantized',
+    1 : 'record_immediately',
+    2 : 'stop_quantized',
+    3 : 'stop_immediately',
+    4 : 'undo',
+    5 : 'clear_immediately',
+    6 : 'quick_fade_clear',
+    7 : 'long_fade_clear',
+    8 : 'toggle_mute',
+    9 : 'get_new_clip_slot'
 }
+
 
 CLIP_ACTIONS = {
     0 : 'record',
@@ -110,3 +115,10 @@ CLIP_ACTIONS = {
     3 : 'clear',
     4 : 'play'
 }
+
+
+
+class BlinkTypes():
+    NO_BLINK = 0
+    SLOW_BLINK = 1
+    FAST_BLINK = 2

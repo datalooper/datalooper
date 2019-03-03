@@ -84,7 +84,6 @@ class Actions:
         #data2 = looper action (rec, stop, undo, clear, mute, get new slot)
         #data3 = quantize action?
         #data4 = looper type (CL# or DL#)
-
         if data.data1 == 0:
             self.call_method_on_all_tracks(data.data4, LOOPER_ACTIONS.get(data.data2), data.data3)
         else:
@@ -184,15 +183,26 @@ class Actions:
     ##### EFFECT ALL DATALOOPER TRACKS ACTIONS #####
 
     def toggle_stop_start(self, data):
+        self.send_message("Fade time: " + data.data4)
+        if data.data1 == 4:
+            track_type = 0
+        elif data.data1 == 3:
+            track_type = 1
+        else:
+            track_type = data.data1
+
         self.__parent.send_message("toggling stop/start")
+
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.__parent.send_message("toggling start")
-            self.call_method_on_all_tracks(data.data1, "start", data.data2)
+            self.call_method_on_all_tracks(track_type, "start", data.data2)
             if data.data2 == 0:
                 self.jump_to_next_bar(False)
         else:
             self.__parent.send_message("toggling stop")
-            self.call_method_on_all_tracks(data.data1, "stop", data.data2)
+            self.call_method_on_all_tracks(track_type, "stop", data.data2)
+            if data.data1 == 4 or data.data1 == 3:
+                self.song.stop_all_clips()
 
     def new_clips_on_all(self, data):
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")

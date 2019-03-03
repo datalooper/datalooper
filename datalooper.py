@@ -119,7 +119,7 @@ class DataLooper(ControlSurface):
             1: "looper_control",
             2: "tap_tempo",
             3: "clip_control",
-            5: "toggle_stop_start",
+            4: "toggle_stop_start",
             6: "transport_control",
             7: "scene_control",
             8: "change_mode",
