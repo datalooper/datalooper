@@ -221,7 +221,13 @@ class Actions:
         self.song.create_scene(-1)
 
     def metronome_control(self, data):
-        pass
+        if data.data1 is 0:
+            self.song.metronome = 0
+        elif data.data1 is 1:
+            self.song.metronome = 1
+        elif data.data2 is 2:
+            self.song.metronome = not self.state.metro
+            self.state.metro = not self.state.metro
 
     def tap_tempo(self, data):
         self.song.tap_tempo()
