@@ -41,7 +41,13 @@ class DataLooper(ControlSurface):
         # initializes base obj
         self.live = Live.Application.get_application()
 
+        self.song().add_metronome_listener(self.on_metro_change)
         self.sysex(0x00, 0x01)
+
+    def on_metro_change(self):
+        if not self.state.ignoreMetroCallback:
+            self.state.tap_tempo_counter = 0
+            self.state.ignoreMetroCallback = False
 
     def send_message(self, m):
         self.log_message(m)
@@ -120,6 +126,7 @@ class DataLooper(ControlSurface):
             2: "tap_tempo",
             3: "clip_control",
             4: "toggle_stop_start",
+            5: "mute_control",
             6: "transport_control",
             7: "scene_control",
             8: "change_mode",

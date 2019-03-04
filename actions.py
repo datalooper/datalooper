@@ -80,14 +80,15 @@ class Actions:
         self.call_method_on_tracks(data, CLIP_TRACK, "new_clip")
 
     def looper_control(self, data):
+        self.send_message("looper control: " + str(data.data3))
         #data1 = looper #, 0 is all
         #data2 = looper action (rec, stop, undo, clear, mute, get new slot)
-        #data3 = quantize action?
         #data4 = looper type (CL# or DL#)
+
         if data.data1 == 0:
-            self.call_method_on_all_tracks(data.data4, LOOPER_ACTIONS.get(data.data2), data.data3)
+            self.call_method_on_all_tracks(data.data3, LOOPER_ACTIONS.get(data.data2))
         else:
-            self.call_method_on_tracks(data, data.data4, LOOPER_ACTIONS.get(data.data2), data.data3)
+            self.call_method_on_tracks(data, data.data3, LOOPER_ACTIONS.get(data.data2))
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
@@ -207,6 +208,34 @@ class Actions:
     def new_clips_on_all(self, data):
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
 
+    def mute_control(self, data):
+        mute_type = data.data1
+        mute_what = data.data2
+        if mute_what == 0:
+            for track in self.song.tracks:
+                if track.playing_slot_index is not -1 and track.clip_slots[track.playing_slot_index].is_playing:
+                    self.execute_mute(mute_type, track)
+        elif mute_what == 1:
+            for track in self.song.tracks:
+                self.execute_mute(mute_type, track)
+        elif mute_what == 2:
+            self.call_method_on_all_tracks(LOOPER_TRACK, "execute_mute", mute_type)
+        elif mute_what == 3:
+            self.call_method_on_all_tracks(CLIP_TRACK, "execute_mute", mute_type)
+        elif mute_what == 4:
+            self.call_method_on_all_tracks(BOTH_TRACK_TYPES, "execute_mute", mute_type)
+
+    def execute_mute(self, mute_type, track):
+        # mute = 0
+        # unmute = 1
+        # toggle = 2
+        if mute_type is 0:
+            track.mute = True
+        elif mute_type is 1:
+            track.mute = False
+        elif mute_type is 2:
+            track.mute = not track.mute
+
     ##### EFFECT ENTIRE SESSION #####
 
     def on_scene_change(self):
@@ -228,7 +257,6 @@ class Actions:
             clip.init_listener()
             clip.update_color()
         self.__parent._set_session_highlight(self.state.trackOffset, self.state.sceneOffset, 3, 3, False)
-
 
     def stop_all_playing_clips(self, data):
         self.song.stop_all_clips()
@@ -262,13 +290,38 @@ class Actions:
         self.song.create_scene(-1)
 
     def metronome_control(self, data):
-        pass
+        if data.data1 is 0:
+            self.song.metronome = 0
+        elif data.data1 is 1:
+            self.song.metronome = 1
+        elif data.data1 is 2:
+            self.song.metronome = not self.state.metro
+            self.state.metro = not self.state.metro
+
+    def transport_control(self, data):
+        if data.data1 is 0:
+            self.song.stop_playing()
+        elif data.data1 is 1:
+            self.song.start_playing()
+        elif data.data1 is 2:
+            if self.song.is_playing:
+                self.song.stop_playing()
+            else:
+                self.song.start_playing()
 
     def tap_tempo(self, data):
         self.song.tap_tempo()
-        if self.state.tap_tempo_counter >= data.data1:
-            self.state.restore_metro()
-        self.state.tap_tempo_counter += 1
+        if data.data1:
+            self.send_message(str(self.state.tap_tempo_counter))
+            if self.state.tap_tempo_counter is 0:
+                self.state.metro = self.song.metronome
+                self.state.ignoreMetroCallback = True
+                self.song.metronome = 0
+            if self.state.tap_tempo_counter >= data.data2:
+                self.state.restore_metro()
+            elif self.state.metro is not False:
+                self.state.tap_tempo_counter += 1
+
 
     def jump_to_next_bar(self, changeBPM):
         self.state.was_recording = self.song.record_mode

@@ -105,20 +105,28 @@ class Track(object):
     def change_mode(self):
         pass
 
-    def record_quantized(self, data):
+    def record_quantized(self):
         self.record(True)
 
-    def record_immediately(self, data):
+    def record_immediately(self):
         self.record(False)
 
-    def stop_quantized(self, data):
+    def stop_quantized(self):
         self.stop(True)
 
-    def stop_immediately(self, data):
+    def stop_immediately(self):
         self.stop(False)
 
-    def quick_fade_clear(self, data):
+    def quick_fade_clear(self):
         self.clear(500)
 
-    def long_fade_clear(self, data):
+    def long_fade_clear(self):
         self.clear(1500)
+
+    def execute_mute(self, mute_type):
+        if mute_type is 0:
+            self.track.mute = True
+        elif mute_type is 1:
+            self.track.mute = False
+        elif mute_type is 2:
+            self.track.mute = not self.track.mute

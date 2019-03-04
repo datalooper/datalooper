@@ -13,6 +13,7 @@ class State:
         self.mode = LOOPER_MODE
         self.muted_tracks = []
         self.was_recording = False
+        self.ignoreMetroCallback = False
         self.song = song
         self.sceneOffset = 0
         self.trackOffset = 0
