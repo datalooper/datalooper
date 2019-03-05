@@ -178,11 +178,11 @@ class Actions:
 
     def toggle_stop_start(self, data):
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
-            self.call_method_on_all_tracks(data, data.data1, "start", data.data2)
-            if data.data2 == 0:
-                self.jump_to_next_bar(False)
+            self.call_method_on_all_tracks(data, data.data1, "start", False)
+            #if data.data2 == 0:
+                #self.jump_to_next_bar(False)
         else:
-            self.call_method_on_all_tracks(data, data.data1, "stop", data.data2)
+            self.call_method_on_all_tracks(data, data.data1, "stop", False)
 
     def new_clips_on_all(self, data):
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
