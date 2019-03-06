@@ -105,8 +105,8 @@ class DlTrack(Track):
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
 
-    def clear_immediately(self, data):
-        super(DlTrack, self).clear_immediately(data)
+    def clear_immediately(self):
+        super(DlTrack, self).clear_immediately()
         self.request_control(CLEAR_CONTROL)
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " clear pressed")

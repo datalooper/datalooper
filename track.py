@@ -50,7 +50,7 @@ class Track(object):
                             self.send_message(parameter.min)
                             self.clearTimer.start()
         else:
-            self.clear_immediately(0)
+            self.clear_immediately()
 
     def fade(self, increment, numRepeats):
         if self.parameter is not -1 and self.parameter.value >= self.parameter.min + increment:
@@ -67,7 +67,7 @@ class Track(object):
         else:
             self.clearTimerCounter += 1
 
-    def clear_immediately(self, data):
+    def clear_immediately(self):
         if self.parameter is not -1:
             self.parameter.value = self.preClearGain
 
