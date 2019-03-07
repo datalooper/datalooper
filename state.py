@@ -17,6 +17,7 @@ class State:
         self.song = song
         self.sceneOffset = 0
         self.trackOffset = 0
+        self.mute_toggled = False
 
     def updateBPM(self, bpm):
         self.bpm = bpm

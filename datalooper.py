@@ -42,7 +42,7 @@ class DataLooper(ControlSurface):
         self.live = Live.Application.get_application()
 
         self.song().add_metronome_listener(self.on_metro_change)
-        self.sysex(0x00, 0x01)
+        self.send_sysex(0x00, 0x01)
 
     def on_metro_change(self):
         if not self.state.ignoreMetroCallback:
@@ -67,10 +67,7 @@ class DataLooper(ControlSurface):
         time = self.song().get_current_beats_song_time()
         if time.beats != self.state.curBeats:
             self.state.curBeats = time.beats
-            self.sysex(DOWNBEAT_COMMAND, self.state.curBeats)
-
-    def sysex(self, message_type, data):
-        self.send_midi((0xF0, 0x1E, message_type, data, 0xF7))
+            self.send_sysex(DOWNBEAT_COMMAND, self.state.curBeats)
 
     def on_signature_numerator_change(self):
         self.send_message("numerator changed")
@@ -78,11 +75,11 @@ class DataLooper(ControlSurface):
 
     def connect(self):
         self.log_message("looper connecting")
-        self.sysex(0x00, 0x01)
+        self.send_sysex(0x00, 0x01)
 
     def disconnect(self):
         self.log_message("looper disconnecting")
-        self.sysex(0x00, 0x00)
+        self.send_sysex(0x00, 0x00)
 
         super(DataLooper, self).disconnect()
 
@@ -91,9 +88,8 @@ class DataLooper(ControlSurface):
 
     def send_sysex(self, *data):
         # self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
-        looper_status_sysex = (0xF0, 0x1E) + data + (0xF7,)
-        #self.send_message(looper_status_sysex)
-        self.send_midi(looper_status_sysex)
+        sysex = (0xF0, 0x1E) + data + (0xF7,)
+        self.send_midi(sysex)
 
     def send_program_change(self, program):
         self.send_message("sending program change:" + str(program))
@@ -116,7 +112,7 @@ class DataLooper(ControlSurface):
         Will be called when requested by the user, after for example having reconnected
         the MIDI cables...
         """
-        self.sysex(0x00, 0x01)
+        self.send_sysex(0x00, 0x01)
 
     @staticmethod
     def get_method(argument):

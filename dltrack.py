@@ -17,6 +17,7 @@ class DlTrack(Track):
         self.req_record = True
         self.__parent = parent
         self.req_bpm = False
+        self.send_message("initializing new track num: " + str(self.trackNum))
         self.update_state(self.lastState)
 
         if self.track.can_be_armed:
@@ -32,10 +33,10 @@ class DlTrack(Track):
         self.update_state(CLEAR_STATE)
 
     def _on_looper_param_changed(self):
+        self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
             return
 
-        # self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
         self.update_state(int(self.state.value))
 
     def send_message(self, message):
@@ -43,7 +44,7 @@ class DlTrack(Track):
 
     def request_control(self, controlNum):
         self.send_message("Requesting control: ")
-        self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, NOTE_TYPE, (self.trackNum * NUM_CONTROLS) + controlNum)
+        self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, self.trackNum, (self.trackNum * NUM_CONTROLS) + controlNum)
 
     def record(self, quantized):
         # self.__parent.send_message(
@@ -77,9 +78,9 @@ class DlTrack(Track):
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
         if self.lastState == RECORDING_STATE:
-            self.update_state(CLEAR_STATE)
             self.request_control(CLEAR_CONTROL)
             self.ignore_stop = True
+            self.update_state(CLEAR_STATE)
         elif self.lastState != STOP_STATE and self.lastState != CLEAR_STATE:
             if quantized or not self.song.is_playing:
                 self.request_control(STOP_CONTROL)
@@ -98,7 +99,7 @@ class DlTrack(Track):
         elif self.lastState == PLAYING_STATE:
             self.request_control(STOP_CONTROL)
 
-    def undo(self, quantized):
+    def undo(self):
         if self.lastState != CLEAR_STATE or not self.song.is_playing:
             self.request_control(UNDO_CONTROL)
 
@@ -107,6 +108,8 @@ class DlTrack(Track):
 
     def clear_immediately(self):
         super(DlTrack, self).clear_immediately()
+        if self.lastState == OVERDUB_STATE:
+            self.state.value = STOP_STATE
         self.request_control(CLEAR_CONTROL)
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " clear pressed")
@@ -151,9 +154,13 @@ class DlTrack(Track):
             self.action_handler.update_mode(LOOPER_MODE)
 
     def remove_track(self):
-        if self.device in self.track.devices and self.state.value_has_listener(self._on_looper_param_changed):
-            self.state.remove_value_listener(self._on_looper_param_changed)
-        if self.track.can_be_armed and self.track.arm_has_listener(self.set_arm):
-            self.track.remove_arm_listener(self.set_arm)
+        if self.track in self.song.tracks:
+            if self.track.can_be_armed and self.track.arm_has_listener(self.set_arm):
+                self.track.remove_arm_listener(self.set_arm)
+            if self.state is not None and self.state.value_has_listener(self._on_looper_param_changed):
+                self.state.remove_value_listener(self._on_looper_param_changed)
+        else:
+            self.send_message("removing track: " + str(self.trackNum))
+            self.update_state(OFF_STATE)
 
 

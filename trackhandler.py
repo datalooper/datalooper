@@ -61,9 +61,10 @@ class TrackHandler:
         msg = "Removing Tracks: "
         for trackNums in self.tracks.values():
             for track in trackNums:
+                track.remove_track()
                 if track.track in self.song.tracks:
                     msg += track.track.name + " "
-                    track.remove_track()
+
         self.tracks.clear()
         self.send_message(msg)
 
@@ -79,8 +80,6 @@ class TrackHandler:
                     if device.name == "Looper":
                         msg += track.name
                         self.tracks[str(trackNum)].append(DlTrack(self, track, device, trackNum, self.song, self.state, self.actions))
-                    else:
-                        self.send_message("Looper Device Does Not Exist on Track: " + track.name)
         elif track_key == CLIPLOOPER_KEY:
             msg += track.name
             if track.has_midi_input:

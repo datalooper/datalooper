@@ -22,6 +22,7 @@ class Track(object):
         else:
             self.orig_arm = 1
         self.lastState = CLEAR_STATE
+        self.button_num = -1
 
     def clear_listener(self):
         pass
@@ -35,7 +36,7 @@ class Track(object):
     def stop(self, quantized):
         pass
 
-    def undo(self, quantized):
+    def undo(self):
         pass
 
     def clear(self, fadeTime):
@@ -78,26 +79,21 @@ class Track(object):
     def record(self, quantized):
         pass
 
-    def mute(self, mute_type):
-        if mute_type == OFF:
-            self.track.mute = 1
-        elif mute_type == ON:
-            self.track.mute = 0
-        else:
-            if self.track.mute == 1:
-                self.track.mute = 0
-            elif self.track.mute == 0:
-                self.track.mute = 1
 
     def update_state(self, state):
+        # self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
 
-        if state != -1:
-            self.send_message("updating state on track num: " + str(self.trackNum) + " track name: " + self.track.name)
+        if state != -1 and self.button_num != -1:
             self.lastState = state
-            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.trackNum, self.lastState)
+            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
         # if self.trackNum not in self.__parent.duplicates or (
         #         self.trackNum in self.__parent.duplicates and "LED" in self.track.name):
         #     self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
+
+    def request_state(self):
+        # self.send_message("sending requested state on track num: " + str(self.trackNum) + " to state: " + str(self.lastState) + " track name: " + self.track.name)
+        if self.button_num != -1:
+            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
 
     def remove_track(self):
         pass
@@ -124,9 +120,8 @@ class Track(object):
         self.clear(1500)
 
     def execute_mute(self, mute_type):
-        if mute_type is 0:
-            self.track.mute = True
-        elif mute_type is 1:
-            self.track.mute = False
-        elif mute_type is 2:
-            self.track.mute = not self.track.mute
+        self.action_handler.execute_mute(mute_type, self.track)
+
+    def link_button(self, button_num):
+        self.button_num = button_num
+        self.request_state()

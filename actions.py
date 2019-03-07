@@ -6,6 +6,7 @@ import Live
 import math
 from scene import Scene
 from clip import Clip
+from mute import Mute
 
 class Actions:
 
@@ -18,6 +19,7 @@ class Actions:
         self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
         self.scenes = []
         self.clips = []
+        self.mutes = []
         self.song.add_scenes_listener(self.on_scene_change)
 
 
@@ -43,8 +45,8 @@ class Actions:
     def get_track_num_str(self, data):
         return str(self.get_track_num(data))
 
-    def call_method_on_tracks(self, data, track_type, method_name, *args):
-        tracks = self.tracks.get(str(data.data1-1))
+    def call_method_on_tracks(self, track_num, track_type, method_name, *args):
+        tracks = self.tracks.get(str(track_num))
         if tracks is not None:
             for track in tracks:
                 if isinstance(track, self.get_looper_type(track_type)):
@@ -77,7 +79,7 @@ class Actions:
     ##### TRACK ACTIONS #####
 
     def new_clip(self, data):
-        self.call_method_on_tracks(data, CLIP_TRACK, "new_clip")
+        self.call_method_on_tracks(data.data1-1, CLIP_TRACK, "new_clip")
 
     def looper_control(self, data):
         self.send_message("looper control: " + str(data.data3))
@@ -86,9 +88,9 @@ class Actions:
         #data4 = looper type (CL# or DL#)
 
         if data.data1 == 0:
-            self.call_method_on_all_tracks(data.data3, LOOPER_ACTIONS.get(data.data2))
+            self.call_method_on_all_tracks(data.data4, LOOPER_ACTIONS.get(data.data2))
         else:
-            self.call_method_on_tracks(data, data.data3, LOOPER_ACTIONS.get(data.data2))
+            self.call_method_on_tracks(data.data1-1, data.data4, LOOPER_ACTIONS.get(data.data2))
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
@@ -108,6 +110,11 @@ class Actions:
         self.song.scenes[data.data1-1].fire()
 
     def request_state(self, data):
+        # data1 = buttonNum
+        # data2 = command
+        # data3 = data1
+        # data4 = data2, etc...
+
         method = self.__parent.get_method(data.data2)
         if method == "scene_control":
             linkedScene = self.is_scene_linked(data.data3-1, data.data1)
@@ -124,6 +131,17 @@ class Actions:
                 self.clips.append(newClip)
             elif isinstance(linkedClip, Clip):
                 linkedClip.request_state()
+        elif method == "looper_control":
+            if data.data4 == 0:
+                self.call_method_on_tracks(data.data3-1, data.data5, "link_button", data.data1)
+                self.send_message("requesting state looper control track num:" + str(data.data3))
+        elif method == "mute_control":
+            mute = self.is_mute_linked(data.data1)
+            if not mute:
+                mute = Mute(self, data.data1, data.data3, data.data4, self.song, self.tracks)
+                self.mutes.append(mute)
+            elif isinstance(mute, Mute):
+                mute.request_state()
 
         # # button #
         # self.__parent.send_message(data.data1)
@@ -131,6 +149,12 @@ class Actions:
         # self.__parent.send_message(data.data2)
         # # data #
         # self.__parent.send_message(data.data3)
+
+    def is_mute_linked(self, buttonNum):
+        for mute in self.mutes:
+            if mute.buttonNum == buttonNum:
+                return mute
+        return False
 
     def is_clip_linked(self, trackNum, sceneNum):
         for clip in self.clips:
@@ -184,7 +208,7 @@ class Actions:
     ##### EFFECT ALL DATALOOPER TRACKS ACTIONS #####
 
     def toggle_stop_start(self, data):
-        self.send_message("Fade time: " + data.data4)
+        self.send_message("Fade time: " + str(data.data4))
         if data.data1 == 4:
             track_type = 0
         elif data.data1 == 3:
@@ -196,9 +220,10 @@ class Actions:
 
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.__parent.send_message("toggling start")
-            self.call_method_on_all_tracks(track_type, "start", data.data2)
             if data.data2 == 0:
                 self.jump_to_next_bar(False)
+            self.call_method_on_all_tracks(track_type, "start", data.data2)
+
         else:
             self.__parent.send_message("toggling stop")
             self.call_method_on_all_tracks(track_type, "stop", data.data2)
@@ -209,32 +234,44 @@ class Actions:
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
 
     def mute_control(self, data):
-        mute_type = data.data1
-        mute_what = data.data2
-        if mute_what == 0:
-            for track in self.song.tracks:
-                if track.playing_slot_index is not -1 and track.clip_slots[track.playing_slot_index].is_playing:
-                    self.execute_mute(mute_type, track)
-        elif mute_what == 1:
-            for track in self.song.tracks:
-                self.execute_mute(mute_type, track)
-        elif mute_what == 2:
-            self.call_method_on_all_tracks(LOOPER_TRACK, "execute_mute", mute_type)
-        elif mute_what == 3:
-            self.call_method_on_all_tracks(CLIP_TRACK, "execute_mute", mute_type)
-        elif mute_what == 4:
-            self.call_method_on_all_tracks(BOTH_TRACK_TYPES, "execute_mute", mute_type)
+        for mute in self.mutes:
+            if mute.mute_type is data.data1 and mute.mute_what is data.data2:
+                mute.execute_mute()
+        # mute_type = data.data1
+        # mute_what = data.data2
+        # if mute_what == 0:
+        #     for track in self.song.tracks:
+        #         if track.playing_slot_index is not -1 and track.clip_slots[track.playing_slot_index].is_playing:
+        #             self.execute_mute(mute_type, track)
+        # elif mute_what == 1:
+        #     for track in self.song.tracks:
+        #         self.execute_mute(mute_type, track)
+        # elif mute_what == 2:
+        #     self.call_method_on_all_tracks(LOOPER_TRACK, "execute_mute", mute_type)
+        # elif mute_what == 3:
+        #     self.call_method_on_all_tracks(CLIP_TRACK, "execute_mute", mute_type)
+        # elif mute_what == 4:
+        #     self.call_method_on_all_tracks(BOTH_TRACK_TYPES, "execute_mute", mute_type)
 
     def execute_mute(self, mute_type, track):
         # mute = 0
         # unmute = 1
         # toggle = 2
+        self.send_message("mute requested on :" + str(track.name) + " mute type:" + str(mute_type))
         if mute_type is 0:
+            self.state.muted_tracks.append(track)
             track.mute = True
         elif mute_type is 1:
+            if track in self.state.muted_tracks:
+                self.state.muted_tracks.remove(track)
             track.mute = False
         elif mute_type is 2:
-            track.mute = not track.mute
+            if track in self.state.muted_tracks:
+                self.state.muted_tracks.remove(track)
+                track.mute = False
+            else:
+                track.mute = True
+                self.state.muted_tracks.append(track)
 
     ##### EFFECT ENTIRE SESSION #####
 

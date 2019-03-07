@@ -138,7 +138,10 @@ class ClTrack(Track):
             self.send_message(msg)
 
     def remove_track(self):
-        self.remove_listeners()
+        if self.track in self.song.tracks:
+            self.remove_listeners()
+        else:
+            self.update_state(OFF_STATE)
 
     def remove_listeners(self):
         if self.track.fired_slot_index_has_listener(self.on_slot_fired):
