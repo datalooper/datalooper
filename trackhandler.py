@@ -49,6 +49,22 @@ class TrackHandler:
             if not track.name_has_listener(self.__parent.on_track_name_changed):
                 track.add_name_listener(self.__parent.on_track_name_changed)
 
+        for tracks in self.tracks.values():
+            led_track = self.get_led_track(tracks)
+            if len(tracks) > 1 and led_track:
+                for track in tracks:
+                    if track is not led_track:
+                        self.send_message(track)
+                        track.disable_led()
+
+        self.send_sysex(0x00, 0x01)
+
+    def get_led_track(self, tracks):
+        for track in tracks:
+            if "LED" in track.track.name:
+                return track
+        return False
+
     # def clear_unused_tracks(self, track_nums):
     #     # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
     #     i = 0

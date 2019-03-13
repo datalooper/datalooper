@@ -11,6 +11,7 @@ class Track(object):
         self.track = track
         self.trackNum = trackNum
         self.song = song
+        self.led_disabled = False
         self.global_state = state
         self.action_handler = action_handler
         self.clearTimerCounter = 0
@@ -48,7 +49,6 @@ class Track(object):
                             self.parameter = parameter
                             self.preClearGain = parameter.value
                             self.clearTimer = Live.Base.Timer(callback=lambda: self.fade(float(1 / float(fadeTime / 100)), fadeTime / 100), interval=100, repeat=True)
-                            self.send_message(parameter.min)
                             self.clearTimer.start()
         else:
             self.clear_immediately()
@@ -79,21 +79,30 @@ class Track(object):
     def record(self, quantized):
         pass
 
+    def on_quantize_disabled(self):
+        pass
 
     def update_state(self, state):
         # self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
 
-        if state != -1 and self.button_num != -1:
+        if state != -1:
             self.lastState = state
-            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
+            if self.button_num is not -1 and not self.led_disabled:
+                self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
+            if self.lastState == PLAYING_STATE or self.lastState == OVERDUB_STATE:
+                self.global_state.mode = LOOPER_MODE
         # if self.trackNum not in self.__parent.duplicates or (
         #         self.trackNum in self.__parent.duplicates and "LED" in self.track.name):
         #     self.send_sysex(self.trackNum, CHANGE_STATE_COMMAND, self.lastState)
 
     def request_state(self):
-        # self.send_message("sending requested state on track num: " + str(self.trackNum) + " to state: " + str(self.lastState) + " track name: " + self.track.name)
-        if self.button_num != -1:
+        self.send_message("sending requested state on track num: " + str(self.trackNum) + " to state: " + str(self.lastState) + " track name: " + self.track.name + " button number:" + str(self.button_num))
+        if self.button_num != -1 and not self.led_disabled:
             self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
+
+    def disable_led(self):
+        self.send_message("disabling led on track name:" + str(self.track.name))
+        self.led_disabled = True
 
     def remove_track(self):
         pass
@@ -123,5 +132,6 @@ class Track(object):
         self.action_handler.execute_mute(mute_type, self.track)
 
     def link_button(self, button_num):
+        self.send_message("linking button: " + str(button_num))
         self.button_num = button_num
         self.request_state()

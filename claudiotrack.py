@@ -1,5 +1,5 @@
 import cltrack
-
+from consts import *
 
 ### Controls ###
 # 1. Record : Will record a new clip
@@ -19,10 +19,11 @@ class ClAudioTrack(cltrack.ClTrack):
     #################
     def record(self, quantized):
         self.__parent.send_message("record pressed")
+
         if self.clipSlot == -1 or self.clipSlot.is_playing and not self.clipSlot.is_recording:
             self.get_new_clip_slot(False)
         if not self.clipSlot.is_playing or self.clipSlot.is_recording:
-            self.fire_clip()
+            self.fire_clip(quantized)
 
     def undo(self):
         self.get_new_clip_slot(False)

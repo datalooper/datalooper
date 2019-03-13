@@ -24,7 +24,11 @@ class Mute:
         # 2 = toggle
 
     def request_state(self):
-        pass
+        self.__parent.send_message("sending mute state")
+        if self.is_muted:
+            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.buttonNum, OFF_STATE)
+        else:
+            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.buttonNum, CLEAR_STATE)
 
     def execute_mute(self):
         self.__parent.send_message("executing mute on buttonNum: " + str(self.buttonNum) + " mute_type: " + str(self.mute_type) + " mute what: " + str(self.mute_what))
@@ -37,10 +41,7 @@ class Mute:
 
         getattr(self, self.get_method(self.mute_what))(self.is_muted)
 
-        if self.is_muted:
-            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.buttonNum, OFF_STATE)
-        else:
-            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.buttonNum, CLEAR_STATE)
+        self.request_state()
 
     def mute_tracks_playing_clips(self, shouldMute):
         pass
@@ -69,3 +70,6 @@ class Mute:
             4: "mute_all_looper_tracks"
         }
         return action_map.get(argument, "Invalid Action")
+
+    def remove(self):
+        pass

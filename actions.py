@@ -17,11 +17,13 @@ class Actions:
         self.__parent = parent
         self.timerCounter = 0
         self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
+        self.quantize_timer = Live.Base.Timer(callback=self.on_quantize_changed_timer_callback, interval=1, repeat=False)
+
         self.scenes = []
         self.clips = []
         self.mutes = []
         self.song.add_scenes_listener(self.on_scene_change)
-
+        self.lastQuantization = -1
 
     ##### HELPER FUNCTIONS #####
 
@@ -50,13 +52,14 @@ class Actions:
         if tracks is not None:
             for track in tracks:
                 if isinstance(track, self.get_looper_type(track_type)):
-                    self.__parent.send_message("calling method on track name: " + track.track.name + " track num: " + str(track.trackNum))
+                    self.__parent.send_message("calling method " + method_name + " on track name: " + track.track.name + " track num: " + str(track.trackNum))
                     getattr(track, method_name)(*args)
 
     def call_method_on_all_tracks(self, track_type, method_name, *args):
         for tracks in self.tracks.values():
             for track in tracks:
                 if isinstance(track, self.get_looper_type(track_type)):
+                    self.send_message("calling method" + method_name + " on track: " + track.track.name)
                     getattr(track, method_name)(*args)
 
     def check_uniform_state(self, state):
@@ -82,15 +85,15 @@ class Actions:
         self.call_method_on_tracks(data.data1-1, CLIP_TRACK, "new_clip")
 
     def looper_control(self, data):
-        self.send_message("looper control: " + str(data.data3))
+        self.send_message("looper control: " + str(data.data3) + "looper type: " + str(data.data3))
         #data1 = looper #, 0 is all
         #data2 = looper action (rec, stop, undo, clear, mute, get new slot)
-        #data4 = looper type (CL# or DL#)
+        #data3 = looper type (CL# or DL#)
 
         if data.data1 == 0:
-            self.call_method_on_all_tracks(data.data4, LOOPER_ACTIONS.get(data.data2))
+            self.call_method_on_all_tracks(data.data3, LOOPER_ACTIONS.get(data.data2))
         else:
-            self.call_method_on_tracks(data.data1-1, data.data4, LOOPER_ACTIONS.get(data.data2))
+            self.call_method_on_tracks(data.data1-1, data.data3, LOOPER_ACTIONS.get(data.data2))
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
@@ -109,39 +112,61 @@ class Actions:
     def scene_control(self, data):
         self.song.scenes[data.data1-1].fire()
 
+    def change_instance(self, data):
+        self.send_message("changing instance")
+        for scene in self.scenes:
+            scene.remove()
+            scene.buttonNum = -1
+        self.scenes = []
+
+        for clip in self.clips:
+            clip.remove()
+            clip.buttonNum = -1
+        self.clips = []
+
+        for tracks in self.tracks.values():
+            for track in tracks:
+                track.button_num = -1
+
+        for mute in self.mutes:
+            mute.remove()
+            mute.buttonNum = -1
+        self.mutes = []
+
+    def request_midi_map_rebuild(self, data):
+        self.send_message("midi map rebuild requested")
+        self.__parent.request_rebuild_midi_map()
+
     def request_state(self, data):
         # data1 = buttonNum
         # data2 = command
         # data3 = data1
         # data4 = data2, etc...
-
+        self.send_message("requesting state")
         method = self.__parent.get_method(data.data2)
         if method == "scene_control":
             linkedScene = self.is_scene_linked(data.data3-1, data.data1)
             if not linkedScene:
-                newScene = Scene(data.data3-1, data.data1, self.song, self.state, self)
-                self.scenes.append(newScene)
-                newScene.request_state()
-            elif isinstance(linkedScene, Scene):
-                linkedScene.request_state()
+                linkedScene = Scene(data.data3-1, data.data1, self.song, self.state, self)
+                self.scenes.append(linkedScene)
+            linkedScene.request_state()
         elif method == "clip_control":
             linkedClip = self.is_clip_linked(data.data3-1, data.data4)
             if not linkedClip:
                 newClip = Clip(data.data3-1, data.data6-1, data.data1, self.song, self.state, self)
                 self.clips.append(newClip)
-            elif isinstance(linkedClip, Clip):
-                linkedClip.request_state()
+            linkedClip.request_state()
         elif method == "looper_control":
-            if data.data4 == 0:
+            if data.data4 == 0 or data.data4 == 1:
                 self.call_method_on_tracks(data.data3-1, data.data5, "link_button", data.data1)
                 self.send_message("requesting state looper control track num:" + str(data.data3))
         elif method == "mute_control":
+            self.send_message("found mute control mute type:" + str(data.data3))
             mute = self.is_mute_linked(data.data1)
             if not mute:
                 mute = Mute(self, data.data1, data.data3, data.data4, self.song, self.tracks)
                 self.mutes.append(mute)
-            elif isinstance(mute, Mute):
-                mute.request_state()
+            mute.request_state()
 
         # # button #
         # self.__parent.send_message(data.data1)
@@ -206,6 +231,21 @@ class Actions:
     #         x += 1
 
     ##### EFFECT ALL DATALOOPER TRACKS ACTIONS #####
+
+    def disable_quantization(self):
+        if not self.song.clip_trigger_quantization_has_listener(self.on_quantize_changed):
+            self.song.add_clip_trigger_quantization_listener(self.on_quantize_changed)
+            self.lastQuantization = self.song.clip_trigger_quantization
+            self.song.clip_trigger_quantization = Live.Song.Quantization.q_no_q
+
+    def on_quantize_changed(self):
+        self.send_message("quantization disabled")
+        self.quantize_timer.start()
+
+    def on_quantize_changed_timer_callback(self):
+        self.song.remove_clip_trigger_quantization_listener(self.on_quantize_changed)
+        self.call_method_on_all_tracks(CLIP_TRACK, "on_quantize_disabled")
+        self.song.clip_trigger_quantization = self.lastQuantization
 
     def toggle_stop_start(self, data):
         self.send_message("Fade time: " + str(data.data4))
@@ -358,7 +398,6 @@ class Actions:
                 self.state.restore_metro()
             elif self.state.metro is not False:
                 self.state.tap_tempo_counter += 1
-
 
     def jump_to_next_bar(self, changeBPM):
         self.state.was_recording = self.song.record_mode

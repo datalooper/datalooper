@@ -14,8 +14,9 @@ class ClTrack(Track):
         self.clipStopping = False
         self.ignoreState = False
         self.mutedClip = -1
+        self.lastQuantization = -1
         self.muteTimer = Live.Base.Timer(callback=self.on_mute_timer, interval=1, repeat=False)
-
+        self.fire_requested = False
         self.add_listeners()
 
         self.lastState = self.check_clip_slot_state()
@@ -43,6 +44,11 @@ class ClTrack(Track):
                 self.clipSlot = self.track.clip_slots[last_slot + 1]
         self.send_message("adding listener from get_new_clip_slot, track #" + str(self.trackNum) + " track name: " + self.track.name)
         self.add_listeners()
+
+    def on_quantize_disabled(self):
+        if self.fire_requested:
+            self.fire_clip(True)
+            self.fire_requested = False
 
     def create_scene(self):
         self.song.create_scene(-1)
@@ -194,22 +200,9 @@ class ClTrack(Track):
         if self.clipSlot != -1 and self.clipSlot.has_clip and not self.clipSlot.clip.is_playing:
             self.clipSlot.clip.fire()
 
-    def clear(self, clearType):
+    def clear_immediately(self):
         self.send_message("clearing...")
         self.remove_clip()
-        # if clearType == DELETE_CLIP:
-        #
-        # elif clearType == NEW_SCENE_KEEP_PLAYING:
-        #     self.get_new_clip_slot(True)
-        # elif clearType == NEW_SCENE_STOP:
-        #     self.stop(False)
-        #     self.get_new_clip_slot(True)
-        # elif clearType == STOP_CLIP:
-        #     self.stop(False)
-        # self.__parent.send_message("clear pressed")
-        # if self.clipSlot != -1 and self.clipSlot.has_clip:
-        #     self.remove_clip()
-        # self.__parent.send_message("Clearing Clip")
 
     def remove_clip(self):
         self.remove_listeners()
@@ -230,9 +223,12 @@ class ClTrack(Track):
             self.clipSlot = -1
             self.update_state(CLEAR_STATE)
 
-    def fire_clip(self):
-        if self.clipSlot != -1:
+    def fire_clip(self, quantized):
+        if self.clipSlot != -1 and quantized:
             self.clipSlot.fire()
+        elif not quantized:
+            self.action_handler.disable_quantization()
+            self.fire_requested = True
         else:
             self.__parent.send_message("No Clip Slot Loaded, Cannot fire Clip")
 
@@ -240,3 +236,4 @@ class ClTrack(Track):
         for clip_slot in self.track.clip_slots:
             self.clipSlot = clip_slot
             self.remove_clip()
+

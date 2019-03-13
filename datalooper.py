@@ -103,7 +103,7 @@ class DataLooper(ControlSurface):
     def handle_sysex(self, midi_bytes):
 
         sysex = Sysex(midi_bytes)
-        #self.send_message(self.get_method(sysex.action))
+        self.send_message(self.get_method(sysex.action))
         getattr(self.__action_handler, self.get_method(sysex.action))(sysex)
 
     def refresh_state(self):
@@ -113,6 +113,8 @@ class DataLooper(ControlSurface):
         the MIDI cables...
         """
         self.send_sysex(0x00, 0x01)
+        self.send_message("refreshing state")
+        super(DataLooper, self).refresh_state()
 
     @staticmethod
     def get_method(argument):
@@ -128,6 +130,7 @@ class DataLooper(ControlSurface):
             8: "change_mode",
             9: "change_instance",
             10: "move_session_highlight",
-            11: "request_state"
+            11: "request_state",
+            12: "request_midi_map_rebuild"
         }
         return action_map.get(argument, "Invalid Action")

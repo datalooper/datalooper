@@ -49,18 +49,18 @@ class DlTrack(Track):
     def record(self, quantized):
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
-        if not quantized:
-            if self.lastState == RECORDING_STATE:
-                self.state.value = STOP_STATE
-                self.calculateBPM(time() - self.rectime)
-            elif self.lastState == CLEAR_STATE:
+        if self.rectime == 0 or (time() - self.rectime) > .5:
+            if not quantized and self.song.is_playing and self.lastState == CLEAR_STATE:
+                self.send_message("updating to record state")
+                self.state.value = RECORDING_STATE
                 self.update_state(RECORDING_STATE)
                 self.rectime = time()
-                self.state.value = RECORDING_STATE
-            elif self.lastState == STOP_STATE:
+            elif not quantized and self.song.is_playing and self.lastState == RECORDING_STATE:
+                self.state.value = STOP_STATE
+                self.calculateBPM(time() - self.rectime)
+            elif not quantized and self.lastState == STOP_STATE:
                 self.state.value = PLAYING_STATE
-        else:
-            if self.rectime == 0 or (time() - self.rectime) > .5:
+            else:
                 # self.send_message("rectime: " + str(time() - self.rectime))
                 self.rectime = time()
                 self.request_control(RECORD_CONTROL)
@@ -151,7 +151,7 @@ class DlTrack(Track):
             self.state.value = PLAYING_STATE
             self.action_handler.jump_to_next_bar(True)
             self.req_bpm = False
-            self.action_handler.update_mode(LOOPER_MODE)
+            #self.action_handler.update_mode(LOOPER_MODE)
 
     def remove_track(self):
         if self.track in self.song.tracks:

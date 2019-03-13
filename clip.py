@@ -119,3 +119,13 @@ class Clip(object):
             elif self.playStatus is False and clip.is_triggered:
                 self.__parent.send_sysex(BLINK, self.buttonNum, BlinkTypes.FAST_BLINK)
 
+    def remove(self):
+        trackNum = self.trackNum
+        sceneNum = self.sceneNum
+        if self.state.mode == CLIP_LAUNCH_MODE:
+            trackNum += self.state.trackOffset
+            sceneNum += self.state.sceneOffset
+
+        clip_slot = self.song.tracks[trackNum].clip_slots[sceneNum]
+        if clip_slot.has_clip and clip_slot.clip.color_has_listener(self.on_color_change):
+            self.song.tracks[trackNum].clip_slots[sceneNum].clip.remove_color_listener(self.on_color_change)
