@@ -147,10 +147,10 @@ class DlTrack(Track):
         self.send_message("on tempo change callback")
         self.send_message(str(self.req_bpm))
         if self.req_bpm:
-            self.update_state(PLAYING_STATE)
-            self.state.value = PLAYING_STATE
             self.action_handler.jump_to_next_bar(True)
             self.req_bpm = False
+            self.update_state(PLAYING_STATE)
+            self.state.value = PLAYING_STATE
             #self.action_handler.update_mode(LOOPER_MODE)
 
     def remove_track(self):

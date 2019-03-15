@@ -1,5 +1,7 @@
 from consts import *
-
+from dltrack import DlTrack
+from cltrack import ClTrack
+from track import Track
 
 class Mute:
     def __init__(self, parent, buttonNum, mute_type, mute_what, song, tracks):
@@ -44,16 +46,25 @@ class Mute:
         self.request_state()
 
     def mute_tracks_playing_clips(self, shouldMute):
-        pass
+        for track in self.song.tracks:
+            if track.playing_slot_index is not -1:
+                track.mute = shouldMute
 
     def mute_all_tracks(self, shouldMute):
-        pass
+        for track in self.song.tracks:
+            track.mute = shouldMute
 
     def mute_all_dl_tracks(self, shouldMute):
-        pass
+        for tracks in self.tracks.values():
+            for track in tracks:
+                if isinstance(track, DlTrack):
+                    track.track.mute = shouldMute
 
     def mute_all_cl_tracks(self, shouldMute):
-        pass
+        for tracks in self.tracks.values():
+            for track in tracks:
+                if isinstance(track, ClTrack):
+                    track.track.mute = shouldMute
 
     def mute_all_looper_tracks(self, shouldMute):
         for tracks in self.tracks.values():
