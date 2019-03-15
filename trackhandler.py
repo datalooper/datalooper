@@ -48,23 +48,44 @@ class TrackHandler:
             # adds name change listener to all tracks
             if not track.name_has_listener(self.__parent.on_track_name_changed):
                 track.add_name_listener(self.__parent.on_track_name_changed)
-        self.clear_unused_tracks(track_nums)
 
-    def clear_unused_tracks(self, track_nums):
-        # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
-        i = 0
-        while i < NUM_TRACKS:
-            if i not in track_nums:
-                self.__parent.send_sysex(i, CHANGE_STATE_COMMAND, CLEAR_STATE)
-            i += 1
+        for tracks in self.tracks.values():
+            led_track = self.get_led_track(tracks)
+            if len(tracks) > 1 and led_track:
+                for track in tracks:
+                    if track is not led_track:
+                        self.send_message(track)
+                        track.disable_led()
+
+        self.send_sysex(0x00, 0x01)
+
+    def get_led_track(self, tracks):
+        for track in tracks:
+            if "LED" in track.track.name:
+                return track
+        return False
+
+    # def clear_unused_tracks(self, track_nums):
+    #     # Sends clear to tracks on pedal that aren't linked. IE, if there's CL#1 & CL#2, track 3 will get a clear state
+    #     i = 0
+    #     while i < NUM_TRACKS:
+    #         if i not in track_nums:
+    #             self.__parent.send_sysex(CHANGE_STATE_COMMAND,i, CLEAR_STATE)
+    #         i += 1
 
     def clear_tracks(self):
+        msg = "Removing Tracks: "
         for trackNums in self.tracks.values():
             for track in trackNums:
                 track.remove_track()
+                if track.track in self.song.tracks:
+                    msg += track.track.name + " "
+
         self.tracks.clear()
+        self.send_message(msg)
 
     def append_tracks(self, track, trackNum, track_key):
+        msg = "Adding tracks: "
         if track_key == DATALOOPER_KEY:
             # adds a listener to tracks detected as DataLoopers to rescan for looper when a devices is added
             if not track.devices_has_listener(self.scan_tracks):
@@ -73,17 +94,15 @@ class TrackHandler:
             if track.devices:
                 for device in track.devices:
                     if device.name == "Looper":
-                        self.send_message("adding looper track: " + str(trackNum))
+                        msg += track.name
                         self.tracks[str(trackNum)].append(DlTrack(self, track, device, trackNum, self.song, self.state, self.actions))
-                    else:
-                        self.send_message("Looper Device Does Not Exist on Track: " + track.name)
         elif track_key == CLIPLOOPER_KEY:
+            msg += track.name
             if track.has_midi_input:
-                self.send_message("adding clip midi track " + str(trackNum))
                 self.tracks[str(trackNum)].append(ClMidiTrack(self, track, trackNum, self.song, self.state, self.actions))
             elif track.has_audio_input:
-                self.send_message("adding clip audio track")
                 self.tracks[str(trackNum)].append(ClAudioTrack(self, track, trackNum, self.song, self.state, self.actions))
+        self.send_message(msg)
 
     def send_midi(self, midi):
         self.__parent.send_midi(midi)
@@ -91,8 +110,8 @@ class TrackHandler:
     def send_message(self, message):
         self.__parent.send_message(message)
 
-    def send_sysex(self, looper, control, data):
-        self.__parent.send_sysex(looper, control, data)
+    def send_sysex(self, *data):
+        self.__parent.send_sysex(*data)
 
     def session_record(self, overdubbing, curTrack):
         if overdubbing:

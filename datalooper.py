@@ -7,6 +7,8 @@ from sysex import Sysex
 from actions import Actions
 from collections import defaultdict
 from state import State
+import json
+import os
 
 class DataLooper(ControlSurface):
 
@@ -23,6 +25,8 @@ class DataLooper(ControlSurface):
         # listens to track add/remove
         self.song().add_tracks_listener(self.on_track_added_or_removed)
 
+        self.song().add_signature_numerator_listener(self.on_signature_numerator_change)
+
         self.tracks = defaultdict(list)
 
         self.state = State(self.song())
@@ -36,6 +40,14 @@ class DataLooper(ControlSurface):
         self.__track_handler.scan_tracks()
         # initializes base obj
         self.live = Live.Application.get_application()
+
+        self.song().add_metronome_listener(self.on_metro_change)
+        self.send_sysex(0x00, 0x01)
+
+    def on_metro_change(self):
+        if not self.state.ignoreMetroCallback:
+            self.state.tap_tempo_counter = 0
+            self.state.ignoreMetroCallback = False
 
     def send_message(self, m):
         self.log_message(m)
@@ -55,22 +67,29 @@ class DataLooper(ControlSurface):
         time = self.song().get_current_beats_song_time()
         if time.beats != self.state.curBeats:
             self.state.curBeats = time.beats
-            looper_status_sysex = (240, 1, 2, 3, DOWNBEAT_COMMAND, 4, 0, 247)
-            self.send_midi(looper_status_sysex)
+            self.send_sysex(DOWNBEAT_COMMAND, self.state.curBeats)
+
+    def on_signature_numerator_change(self):
+        self.send_message("numerator changed")
+        self.send_midi((0xF0, 0x1E, 0x01, self.song().signature_numerator, 0xF7))
+
+    def connect(self):
+        self.log_message("looper connecting")
+        self.send_sysex(0x00, 0x01)
 
     def disconnect(self):
         self.log_message("looper disconnecting")
-        looper_status_sysex = (240, 1, 2, 3, 0, 4, 0, 247)
-        self.send_sysex(0, ABLETON_CONNECTED_COMMAND, 0)
+        self.send_sysex(0x00, 0x00)
+
         super(DataLooper, self).disconnect()
 
     def send_midi(self, midi_event_bytes):
         self.__c_instance.send_midi(midi_event_bytes)
 
-    def send_sysex(self, looper, control, data):
+    def send_sysex(self, *data):
         # self.send_message("sending sysex: " + str(looper) + " : " + str(control) + " : " + str(data) )
-        looper_status_sysex = (240, looper, control, 3, data, 247)
-        self.send_midi(looper_status_sysex)
+        sysex = (0xF0, 0x1E) + data + (0xF7,)
+        self.send_midi(sysex)
 
     def send_program_change(self, program):
         self.send_message("sending program change:" + str(program))
@@ -82,23 +101,10 @@ class DataLooper(ControlSurface):
             self.handle_sysex(midi_bytes)
 
     def handle_sysex(self, midi_bytes):
-        # {0xF0, 0x41, (byte) *instance, (byte) *bank, (byte) looperNum, (byte) mode, (byte) action, (byte) data1, (byte) data2, sending,  0xF7}
-        # [0] : generic
-        # [1] : generic
-        # [2] : looper instance
-        # [3] : looper bank
-        # [4] : looper number
-        # [5] : mode
-        # [6] : action
-        # [7] : data1
-        # [8] : data2
-        # [9] : sending
-        # [10] : generic
 
         sysex = Sysex(midi_bytes)
         self.send_message(self.get_method(sysex.action))
         getattr(self.__action_handler, self.get_method(sysex.action))(sysex)
-
 
     def refresh_state(self):
         """Live -> Script
@@ -106,39 +112,25 @@ class DataLooper(ControlSurface):
         Will be called when requested by the user, after for example having reconnected
         the MIDI cables...
         """
-        self.send_sysex(0, ABLETON_CONNECTED_COMMAND, 1)
+        self.send_sysex(0x00, 0x01)
+        self.send_message("refreshing state")
+        super(DataLooper, self).refresh_state()
 
     @staticmethod
     def get_method(argument):
         action_map = {
-            0: "record",
-            1: "stop",
-            2: "undo",
-            3: "clear",
-            4: "mute_track",
-            5: "new_clip",
-            6: "bank",
-            7: "change_instance",
-            8: "record_bank",
-            9: "stop_bank",
-            10: "undo_bank",
-            11: "clear_bank",
-            12: "start_bank",
-            13: "mute_bank",
-            14: "record_all",
-            15: "stop_all",
-            16: "undo_all",
-            17: "clear_all",
-            18: "start_all",
-            19: "mute_all",
-            20: "toggle_stop_start",
-            21: "stop_all_playing_clips",
-            22: "mute_all_tracks_playing_clips",
-            23: "create_scene",
-            24: "metronome_control",
-            25: "tap_tempo",
-            26: "jump_to_next_bar",
-            27: "change_mode",
-            28: "new_clips_on_all"
+            0: "metronome_control",
+            1: "looper_control",
+            2: "tap_tempo",
+            3: "clip_control",
+            4: "toggle_stop_start",
+            5: "mute_control",
+            6: "transport_control",
+            7: "scene_control",
+            8: "change_mode",
+            9: "change_instance",
+            10: "move_session_highlight",
+            11: "request_state",
+            12: "request_midi_map_rebuild"
         }
         return action_map.get(argument, "Invalid Action")
