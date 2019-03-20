@@ -90,20 +90,17 @@ class Actions:
         #data2 = looper action (rec, stop, undo, clear, mute, get new slot)
         #data3 = looper type (CL# or DL#)
 
+        action = LOOPER_ACTIONS.get(data.data2)
         if data.data1 == 0:
-            self.call_method_on_all_tracks(data.data3, LOOPER_ACTIONS.get(data.data2))
+            self.call_method_on_all_tracks(data.data3, action)
         else:
-            self.call_method_on_tracks(data.data1-1, data.data3, LOOPER_ACTIONS.get(data.data2))
+            self.call_method_on_tracks(data.data1-1, data.data3, action)
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
         trackNum = data.data1 - 1
-        sceneNum = data.data4 - 1
-
-        if self.state.mode == CLIP_LAUNCH_MODE:
-            trackNum += self.state.trackOffset
-            sceneNum += self.state.sceneOffset
-
+        sceneNum = data.data3 - 1
+        self.__parent.send_message("clip control called")
         for clip in self.clips:
             if clip.trackNum == trackNum and clip.sceneNum == sceneNum:
                 action = CLIP_ACTIONS.get(data.data2)
@@ -142,7 +139,6 @@ class Actions:
         # data2 = command
         # data3 = data1
         # data4 = data2, etc...
-        self.send_message("requesting state")
         method = self.__parent.get_method(data.data2)
         if method == "scene_control":
             linkedScene = self.is_scene_linked(data.data3-1, data.data1)
@@ -151,15 +147,15 @@ class Actions:
                 self.scenes.append(linkedScene)
             linkedScene.request_state()
         elif method == "clip_control":
-            linkedClip = self.is_clip_linked(data.data3-1, data.data4)
+            self.send_message("requesting state on button number: " + str(data.data1) + " track #" + str(data.data3-1) + " clip #" + str(data.data5-1))
+            linkedClip = self.is_clip_linked(data.data3-1, data.data5-1)
             if not linkedClip:
-                newClip = Clip(data.data3-1, data.data6-1, data.data1, self.song, self.state, self)
-                self.clips.append(newClip)
+                linkedClip = Clip(data.data3-1, data.data5-1, data.data1, self.song, self.state, self)
+                self.clips.append(linkedClip)
             linkedClip.request_state()
         elif method == "looper_control":
-            if data.data4 == 0 or data.data4 == 1:
-                self.call_method_on_tracks(data.data3-1, data.data5, "link_button", data.data1)
-                self.send_message("requesting state looper control track num:" + str(data.data3))
+            self.call_method_on_tracks(data.data3-1, data.data5, "link_button", data.data1, LOOPER_ACTIONS.get(data.data4))
+            self.send_message("requesting state looper control track num:" + str(data.data3))
         elif method == "mute_control":
             self.send_message("found mute control mute type:" + str(data.data3))
             mute = self.is_mute_linked(data.data1)
@@ -277,41 +273,26 @@ class Actions:
         for mute in self.mutes:
             if mute.mute_type is data.data1 and mute.mute_what is data.data2:
                 mute.execute_mute()
-        # mute_type = data.data1
-        # mute_what = data.data2
-        # if mute_what == 0:
-        #     for track in self.song.tracks:
-        #         if track.playing_slot_index is not -1 and track.clip_slots[track.playing_slot_index].is_playing:
-        #             self.execute_mute(mute_type, track)
-        # elif mute_what == 1:
-        #     for track in self.song.tracks:
-        #         self.execute_mute(mute_type, track)
-        # elif mute_what == 2:
-        #     self.call_method_on_all_tracks(LOOPER_TRACK, "execute_mute", mute_type)
-        # elif mute_what == 3:
-        #     self.call_method_on_all_tracks(CLIP_TRACK, "execute_mute", mute_type)
-        # elif mute_what == 4:
-        #     self.call_method_on_all_tracks(BOTH_TRACK_TYPES, "execute_mute", mute_type)
 
-    def execute_mute(self, mute_type, track):
-        # mute = 0
-        # unmute = 1
-        # toggle = 2
-        self.send_message("mute requested on :" + str(track.name) + " mute type:" + str(mute_type))
-        if mute_type is 0:
-            self.state.muted_tracks.append(track)
-            track.mute = True
-        elif mute_type is 1:
-            if track in self.state.muted_tracks:
-                self.state.muted_tracks.remove(track)
-            track.mute = False
-        elif mute_type is 2:
-            if track in self.state.muted_tracks:
-                self.state.muted_tracks.remove(track)
-                track.mute = False
-            else:
-                track.mute = True
-                self.state.muted_tracks.append(track)
+    # def execute_mute(self, mute_type, track):
+    #     # mute = 0
+    #     # unmute = 1
+    #     # toggle = 2
+    #     self.send_message("mute requested on :" + str(track.name) + " mute type:" + str(mute_type))
+    #     if mute_type is 0:
+    #         self.state.muted_tracks.append(track)
+    #         track.mute = True
+    #     elif mute_type is 1:
+    #         if track in self.state.muted_tracks:
+    #             self.state.muted_tracks.remove(track)
+    #         track.mute = False
+    #     elif mute_type is 2:
+    #         if track in self.state.muted_tracks:
+    #             self.state.muted_tracks.remove(track)
+    #             track.mute = False
+    #         else:
+    #             track.mute = True
+    #             self.state.muted_tracks.append(track)
 
     ##### EFFECT ENTIRE SESSION #####
 
@@ -322,6 +303,8 @@ class Actions:
 
     def move_session_highlight(self, data):
         self.__parent.send_message("moving session highlight:" + str(data.data1))
+        for clip in self.clips:
+            clip.remove()
         if data.data1 == 0 and self.state.sceneOffset > 0:
             self.state.sceneOffset -= 1
         elif data.data1 == 1:
@@ -339,29 +322,29 @@ class Actions:
         self.song.stop_all_clips()
         self.stop_all(data)
 
-    def mute_all_tracks_playing_clips(self, data):
-        if data.data1 == OFF:
-            self.ex_mute_all_tracks_playing_clips()
-
-        elif data.data1 == ON:
-            self.unmute_all_tracks_playing_clips()
-
-        elif data.data1 == TOGGLE:
-            if len(self.state.muted_tracks) == 0:
-                self.ex_mute_all_tracks_playing_clips()
-            else:
-                self.unmute_all_tracks_playing_clips()
-
-    def ex_mute_all_tracks_playing_clips(self):
-        for track in self.song.tracks:
-            if track.playing_slot_index != -1:
-                self.state.muted_tracks.append(track)
-                track.mute = 1
-
-    def unmute_all_tracks_playing_clips(self):
-        for track in self.state.muted_tracks:
-            track.mute = 0
-            self.state.muted_tracks = []
+    # def mute_all_tracks_playing_clips(self, data):
+    #     if data.data1 == OFF:
+    #         self.ex_mute_all_tracks_playing_clips()
+    #
+    #     elif data.data1 == ON:
+    #         self.unmute_all_tracks_playing_clips()
+    #
+    #     elif data.data1 == TOGGLE:
+    #         if len(self.state.muted_tracks) == 0:
+    #             self.ex_mute_all_tracks_playing_clips()
+    #         else:
+    #             self.unmute_all_tracks_playing_clips()
+    #
+    # def ex_mute_all_tracks_playing_clips(self):
+    #     for track in self.song.tracks:
+    #         if track.playing_slot_index != -1:
+    #             self.state.muted_tracks.append(track)
+    #             track.mute = 1
+    #
+    # def unmute_all_tracks_playing_clips(self):
+    #     for track in self.state.muted_tracks:
+    #         track.mute = 0
+    #         self.state.muted_tracks = []
 
     def create_scene(self, data):
         self.song.create_scene(-1)
@@ -413,23 +396,6 @@ class Actions:
     def change_mode(self, data):
         self.state.change_mode(self.__parent, data.data1)
         self.__parent.send_message("mode change to: " + str(data.data1))
-
-
-    def send_color_dump(self):
-        pass
-        # x0 = 0
-        # y0 = 0
-        # self.__parent.send_sysex(CLIP_COLOR_COMMAND, 127, 127, 0)
-        # for x in range(self.state.sceneOffset, self.state.sceneOffset+3):
-        #     for y in range(self.state.trackOffset, self.state.trackOffset + 3):
-        #         if self.song.tracks[y].clip_slots[x].has_clip:
-        #             color = self.song.tracks[y].clip_slots[x].clip.color
-        #             carray = self.get_color_array(color)
-        #             buttonNum = y0 + x0 * NUM_CONTROLS
-        #             self.__parent.send_sysex(CLIP_COLOR_COMMAND, buttonNum, carray[0], carray[1], carray[2], carray[3], carray[4], carray[5])
-        #         y0+=1
-        #     x0+=1
-        #     y0 = 0
 
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)

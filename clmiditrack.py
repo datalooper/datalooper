@@ -71,4 +71,14 @@ class ClMidiTrack(cltrack.ClTrack):
     def new_clip(self):
         self.get_new_clip_slot(False)
 
+    def get_new_clip_slot(self, new_scene = False):
+        if self.lastState == OVERDUB_STATE:
+            self.endOverdub()
+        super(ClMidiTrack, self).get_new_clip_slot(new_scene)
+
+    def remove_clip_slot(self):
+        if self.lastState == OVERDUB_STATE:
+            self.endOverdub()
+        super(ClMidiTrack, self).remove_clip_slot()
+
 

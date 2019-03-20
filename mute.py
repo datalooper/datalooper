@@ -47,7 +47,7 @@ class Mute:
 
     def mute_tracks_playing_clips(self, shouldMute):
         for track in self.song.tracks:
-            if track.playing_slot_index is not -1:
+            if track.playing_slot_index > -1:
                 track.mute = shouldMute
 
     def mute_all_tracks(self, shouldMute):

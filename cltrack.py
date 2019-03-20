@@ -26,7 +26,7 @@ class ClTrack(Track):
     ###### HELPER METHODS ######
 
     # manages clip listeners and loads the first empty clip slot location into memory
-    def get_new_clip_slot(self, new_scene):
+    def get_new_clip_slot(self, new_scene = False):
         #self.__parent.send_message("Getting New Clip")
         # clear current clip slot
         self.remove_clip_slot()
@@ -201,6 +201,7 @@ class ClTrack(Track):
             self.clipSlot.clip.fire()
 
     def clear_immediately(self):
+        super(ClTrack, self).clear_immediately()
         self.send_message("clearing...")
         self.remove_clip()
 

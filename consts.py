@@ -15,9 +15,7 @@ CHANGE_STATE_COMMAND = 1
 REQUEST_CONTROL_COMMAND = 2
 DOWNBEAT_COMMAND = 3
 CLIP_COLOR_COMMAND = 4
-UPDATE_BUTTON_COLOR = 5
-BLINK = 6
-CHANGE_BANK_COMMAND = 7
+BLINK = 5
 NOTE_TYPE = 0
 
 DATALOOPER_KEY = 'DL#'
@@ -104,16 +102,15 @@ LOOPER_ACTIONS = {
     6 : 'quick_fade_clear',
     7 : 'long_fade_clear',
     8 : 'toggle_mute',
-    9 : 'get_new_clip_slot'
+    9 : 'remove_clip_slot'
 }
 
 
 CLIP_ACTIONS = {
-    0 : 'record',
+    0 : 'fire',
     1 : 'stop',
     2 : 'undo',
-    3 : 'clear',
-    4 : 'play'
+    3 : 'clear'
 }
 
 

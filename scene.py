@@ -26,7 +26,7 @@ class Scene:
     def update_color(self):
         if self.state.mode == LOOPER_MODE :
             carray = self.__parent.get_color_array(self.song.scenes[self.sceneNum].color)
-            self.__parent.send_sysex(UPDATE_BUTTON_COLOR, self.buttonNum, carray[0], carray[1], carray[2], carray[3],carray[4], carray[5])
+            self.__parent.send_sysex(CLIP_COLOR_COMMAND, self.buttonNum, carray[0], carray[1], carray[2], carray[3],carray[4], carray[5])
 
     def remove(self):
         if self.song.scenes[self.sceneNum].color_has_listener(self.on_color_change):
