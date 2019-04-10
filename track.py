@@ -93,9 +93,12 @@ class Track(object):
         # self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
 
         if state != -1:
+            if self.lastState != state and self.global_state.mode != NEW_SESSION_MODE and self.button_num is not -1:
+                self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.SLOW_BLINK)
             self.lastState = state
             if self.button_num is not -1 and not self.led_disabled:
                 self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
+
             if self.lastState == PLAYING_STATE or self.lastState == OVERDUB_STATE:
                 self.global_state.mode = LOOPER_MODE
         # if self.trackNum not in self.__parent.duplicates or (
@@ -128,6 +131,9 @@ class Track(object):
 
     def record_immediately(self):
         self.record(False)
+
+    def record_ignoring_state(self):
+        pass
 
     def stop_quantized(self):
         self.stop(True)

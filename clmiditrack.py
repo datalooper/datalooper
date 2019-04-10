@@ -43,6 +43,11 @@ class ClMidiTrack(cltrack.ClTrack):
             # Scenario 5
             self.fire_clip(quantized)
 
+    def stop(self, quantized):
+        super(ClMidiTrack, self).stop(quantized)
+        if self.clipSlot != -1 and self.clipSlot.has_clip and self.clipSlot.clip.is_overdubbing:
+            self.endOverdub()
+
     def undo(self):
         self.undoOverdub()
 

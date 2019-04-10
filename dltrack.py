@@ -63,13 +63,18 @@ class DlTrack(Track):
             else:
                 # self.send_message("rectime: " + str(time() - self.rectime))
                 self.rectime = time()
-                self.request_control(RECORD_CONTROL)
+                if self.button_num != -1:
+                    self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
+                self.request_control(MASTER_CONTROL)
 
+    def record_ignoring_state(self):
+        self.request_control(RECORD_CONTROL)
+    
     def play(self, quantized):
         if self.lastState == STOP_STATE:
             # self.send_message("attempting play")
             if quantized:
-                self.request_control(RECORD_CONTROL)
+                self.request_control(MASTER_CONTROL)
             else:
                 self.state.value = PLAYING_STATE
             self.update_state(PLAYING_STATE)
@@ -84,6 +89,8 @@ class DlTrack(Track):
         elif self.lastState != STOP_STATE and self.lastState != CLEAR_STATE:
             if quantized or not self.song.is_playing:
                 self.request_control(STOP_CONTROL)
+                if self.song.is_playing and self.button_num != -1:
+                    self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
             else:
                 # self.send_message("entering stop state")
                 self.update_state(STOP_STATE)
@@ -95,7 +102,7 @@ class DlTrack(Track):
 
     def toggle_playback(self):
         if self.lastState == STOP_STATE:
-            self.request_control(RECORD_CONTROL)
+            self.request_control(MASTER_CONTROL)
         elif self.lastState == PLAYING_STATE:
             self.request_control(STOP_CONTROL)
 
@@ -163,4 +170,7 @@ class DlTrack(Track):
             self.send_message("removing track: " + str(self.trackNum))
             self.update_state(OFF_STATE)
 
+    def play(self):
+        self.request_control(PLAY_CONTROL)
 
+        

@@ -168,9 +168,12 @@ class ClTrack(Track):
         #self.send_message("stopping")
         if self.track.playing_slot_index >= 0:
             clip_slot = self.track.clip_slots[self.track.playing_slot_index]
-            if clip_slot.clip.is_recording:
+            if clip_slot.clip.is_recording and not clip_slot.clip.is_overdubbing:
+                self.send_message("clip is recording, clearing now")
                 self.clipSlot.delete_clip()
             if self.clipSlot == clip_slot and quantized and self.clipSlot.has_clip:
+                if self.button_num != -1:
+                    self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
                 self.clipStopping = True
                 clip_slot.clip.stop()
             elif clip_slot.has_clip:
@@ -196,8 +199,10 @@ class ClTrack(Track):
             elif not self.clipSlot.clip.is_playing:
                 self.clipSlot.clip.fire()
 
-    def play(self, quantized):
-        if self.clipSlot != -1 and self.clipSlot.has_clip and not self.clipSlot.clip.is_playing:
+    def play(self, quantized = True):
+        if self.clipSlot != -1 and self.clipSlot.has_clip and (not self.clipSlot.clip.is_playing or self.clipSlot.clip.is_recording):
+            if self.button_num != -1:
+                self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
             self.clipSlot.clip.fire()
 
     def clear_immediately(self):
@@ -225,7 +230,9 @@ class ClTrack(Track):
             self.update_state(CLEAR_STATE)
 
     def fire_clip(self, quantized):
-        if self.clipSlot != -1 and quantized:
+        if self.clipSlot != -1 and quantized and self.track.arm and not self.track.implicit_arm:
+            if self.song.clip_trigger_quantization != Live.Song.Quantization.q_no_q and self.button_num != -1:
+                self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
             self.clipSlot.fire()
         elif not quantized:
             self.action_handler.disable_quantization()
@@ -238,3 +245,9 @@ class ClTrack(Track):
             self.clipSlot = clip_slot
             self.remove_clip()
 
+    def record_ignoring_state(self):
+        if self.clipSlot == -1 or (self.clipSlot.has_clip and not self.clipSlot.clip.is_recording):
+            self.get_new_clip_slot(False)
+        elif self.clipSlot.has_clip and self.clipSlot.clip.is_recording:
+            self.clipSlot.delete_clip()
+        self.fire_clip(True)

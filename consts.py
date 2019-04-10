@@ -1,11 +1,12 @@
 NUM_TRACKS = 3
-NUM_BANKS = 3
-NUM_CONTROLS = 4
+NUM_CONTROLS = 6
 
-RECORD_CONTROL = 0
+MASTER_CONTROL = 0
 STOP_CONTROL = 1
 UNDO_CONTROL = 2
 CLEAR_CONTROL = 3
+PLAY_CONTROL = 4
+RECORD_CONTROL = 5
 
 RESET_COMMAND = 0
 INSTANCE_CHANGE = 6
@@ -102,7 +103,9 @@ LOOPER_ACTIONS = {
     6 : 'quick_fade_clear',
     7 : 'long_fade_clear',
     8 : 'toggle_mute',
-    9 : 'remove_clip_slot'
+    9 : 'remove_clip_slot',
+    10 : 'record_ignoring_state',
+    11 : 'play'
 }
 
 
