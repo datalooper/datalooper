@@ -30,7 +30,8 @@ class DlTrack(Track):
         self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
 
     def set_arm(self):
-        self.update_state(CLEAR_STATE)
+        #self.update_state(CLEAR_STATE)
+        pass
 
     def _on_looper_param_changed(self):
         self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
@@ -126,7 +127,7 @@ class DlTrack(Track):
         loop_length_in_minutes = loop_length / 60
         i = 1
         bpms = []
-        closest_to_tempo = 120
+        closest_to_tempo = 100
 
         while i <= 64:
             i *= 2
@@ -141,6 +142,7 @@ class DlTrack(Track):
         self.global_state.updateBPM(bpm)
 
     def change_mode(self):
+        self.send_message("changing mode")
         if self.global_state.mode == LOOPER_MODE:
             self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
         elif self.global_state.mode == NEW_SESSION_MODE:

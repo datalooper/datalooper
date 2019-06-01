@@ -395,6 +395,7 @@ class Actions:
 
     def change_mode(self, data):
         self.state.change_mode(self.__parent, data.data1)
+        self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
         self.__parent.send_message("mode change to: " + str(data.data1))
 
     def send_sysex(self, *data):
