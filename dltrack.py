@@ -127,7 +127,7 @@ class DlTrack(Track):
         loop_length_in_minutes = loop_length / 60
         i = 1
         bpms = []
-        closest_to_tempo = 100
+        closest_to_tempo = 120
 
         while i <= 64:
             i *= 2

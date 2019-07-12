@@ -16,6 +16,7 @@ class TrackHandler:
         self.actions = actions
         self.tracks = tracks
         self.trackStore = []
+        self.track_nums = []
         self.state = state
 
     def disconnect(self):
@@ -24,15 +25,26 @@ class TrackHandler:
     # Detects tracks with 'looper' in the title and listens for param changes
     def scan_tracks(self):
         self.send_message("scanning for DataLooper tracks")
-        # get all tracks
-        songTracks = self.song.tracks
 
         # clear CL# identified tracks
         self.clear_tracks()
-        track_nums = []
+        self.track_nums = []
+        self.iterate_tracks(self.song.tracks)
+        self.iterate_tracks(self.song.return_tracks)
+        self.send_sysex(0x00, 0x01)
+
+        for tracks in self.tracks.values():
+            led_track = self.get_led_track(tracks)
+            if len(tracks) > 1 and led_track:
+                for track in tracks:
+                    if track is not led_track:
+                        self.send_message(track)
+                        track.disable_led()
+
+    def iterate_tracks(self, tracks):
 
         # iterate through all tracks
-        for track in songTracks:
+        for track in tracks:
             # check for tracks with naming convention
             for key in TRACK_KEYS:
                 # checks if key exists in name
@@ -43,21 +55,11 @@ class TrackHandler:
                         track_num = int(track.name[string_pos + 3: string_pos + 5]) - 1
                     else:
                         track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
-                    track_nums.append(track_num)
+                    self.track_nums.append(track_num)
                     self.append_tracks(track, track_num, key)
             # adds name change listener to all tracks
             if not track.name_has_listener(self.__parent.on_track_name_changed):
                 track.add_name_listener(self.__parent.on_track_name_changed)
-
-        for tracks in self.tracks.values():
-            led_track = self.get_led_track(tracks)
-            if len(tracks) > 1 and led_track:
-                for track in tracks:
-                    if track is not led_track:
-                        self.send_message(track)
-                        track.disable_led()
-
-        self.send_sysex(0x00, 0x01)
 
     def get_led_track(self, tracks):
         for track in tracks:

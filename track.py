@@ -47,7 +47,7 @@ class Track(object):
         if fadeTime > 0 and parameter:
             self.parameter = parameter
             self.preClearGain = parameter.value
-            self.clearTimer = Live.Base.Timer(callback=lambda: self.fade(float(1 / float(fadeTime / 100)), fadeTime / 100), interval=100, repeat=True)
+            self.clearTimer = Live.Base.Timer(callback=lambda: self.fade(float(-self.parameter.min / float(fadeTime / 100)), fadeTime / 100), interval=100, repeat=True)
             self.clearTimer.start()
         else:
             self.clear_immediately()
@@ -61,9 +61,11 @@ class Track(object):
         return False
 
     def fade(self, increment, numRepeats):
+        self.send_message("gain min:" + str(self.parameter.min))
         if self.parameter is not -1 and self.parameter.value >= self.parameter.min + increment:
             self.parameter.value = float(self.parameter.value) - increment
         else:
+
             self.parameter.value = -1
             self.clearTimer.stop()
             self.clearTimerCounter = 0

@@ -37,12 +37,17 @@ class DataLooper(ControlSurface):
         # creates obj to handle tracks
         self.__track_handler = TrackHandler(self, self.song(), self.tracks, self.state, self.__action_handler)
 
+        self.song().add_is_playing_listener(self.on_is_playing)
         self.__track_handler.scan_tracks()
         # initializes base obj
         self.live = Live.Application.get_application()
 
         self.song().add_metronome_listener(self.on_metro_change)
         self.send_sysex(0x00, 0x01)
+
+    def on_is_playing(self):
+        if not self.song().is_playing:
+            self.send_sysex(SONG_STOPPED_COMMAND);
 
     def on_metro_change(self):
         if not self.state.ignoreMetroCallback:
@@ -65,6 +70,7 @@ class DataLooper(ControlSurface):
 
     def on_time_change(self):
         time = self.song().get_current_beats_song_time()
+
         if time.beats != self.state.curBeats:
             self.state.curBeats = time.beats
             self.send_sysex(DOWNBEAT_COMMAND, self.state.curBeats)
