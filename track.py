@@ -64,6 +64,7 @@ class Track(object):
         if self.parameter is not -1 and self.parameter.value >= self.parameter.min + increment:
             self.parameter.value = float(self.parameter.value) - increment
         else:
+
             self.parameter.value = -1
             self.clearTimer.stop()
             self.clearTimerCounter = 0

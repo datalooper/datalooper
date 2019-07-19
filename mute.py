@@ -39,7 +39,7 @@ class Mute:
         if self.mute_type == 2:
             self.is_muted = not self.is_muted
         else:
-            self.is_muted = self.mute_type
+            self.is_muted = self.mute_type  
 
         getattr(self, self.get_method(self.mute_what))(self.is_muted)
 

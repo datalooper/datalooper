@@ -9,6 +9,7 @@ class DlTrack(Track):
 
     def __init__(self, parent, track, device, trackNum, song, state, action_handler):
         super(DlTrack, self).__init__(parent, track, trackNum, song, state, action_handler)
+        self.name_timer = Live.Base.Timer(callback=self.change_name, interval=1, repeat=False)
         self.tempo_control = -1
         self.device = device
         self.state = device.parameters[STATE]
@@ -19,7 +20,10 @@ class DlTrack(Track):
         self.req_bpm = False
         self.send_message("initializing new track num: " + str(self.trackNum))
         self.update_state(self.lastState)
-
+        self.ignore_name_change = False
+        self.ignore_tempo_control = False
+        self.device.parameters[TEMPO_CONTROL].add_value_listener(self.on_tempo_control_change)
+        self.device.add_name_listener(self.on_name_change)
         if self.track.can_be_armed:
             self.track.add_arm_listener(self.set_arm)
 
@@ -42,6 +46,15 @@ class DlTrack(Track):
 
     def send_message(self, message):
         self.__parent.send_message(message)
+
+    def on_tempo_control_change(self):
+        if not self.ignore_tempo_control:
+            self.send_message("changing mode via listener")
+            #if self.device.parameters[TEMPO_CONTROL].value == 0:
+                #self.__parent.send_sysex(CHANGE_MODE_COMMAND, 1)
+            #else:
+                #self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+        self.ignore_tempo_control = False
 
     def request_control(self, controlNum):
         self.send_message("Requesting control: ")
@@ -127,7 +140,7 @@ class DlTrack(Track):
         loop_length_in_minutes = loop_length / 60
         i = 1
         bpms = []
-        closest_to_tempo = 100
+        closest_to_tempo = 120
 
         while i <= 64:
             i *= 2
@@ -143,6 +156,7 @@ class DlTrack(Track):
 
     def change_mode(self):
         self.send_message("changing mode")
+        self.ignore_tempo_control = True
         if self.global_state.mode == LOOPER_MODE:
             self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
         elif self.global_state.mode == NEW_SESSION_MODE:
@@ -175,4 +189,15 @@ class DlTrack(Track):
     def play(self):
         self.request_control(PLAY_CONTROL)
 
-        
+    def update_state(self, state):
+        self.name_timer.start()
+        super(DlTrack, self).update_state(state)
+
+    def change_name(self):
+        self.ignore_name_change = True
+        self.device.name = str(self.lastState)
+
+    def on_name_change(self):
+        if not self.ignore_name_change:
+            self.update_state(int(self.device.name))
+        self.ignore_name_change = False
