@@ -190,7 +190,8 @@ class DlTrack(Track):
         self.request_control(PLAY_CONTROL)
 
     def update_state(self, state):
-        self.name_timer.start()
+        if (self.lastState == CLEAR_STATE or self.lastState == RECORDING_STATE ) and self.device.name != str(self.lastState):
+            self.name_timer.start()
         super(DlTrack, self).update_state(state)
 
     def change_name(self):
@@ -198,6 +199,6 @@ class DlTrack(Track):
         self.device.name = str(self.lastState)
 
     def on_name_change(self):
-        if not self.ignore_name_change:
+        if not self.ignore_name_change and str(self.device.name) == CLEAR_STATE:
             self.update_state(int(self.device.name))
         self.ignore_name_change = False
