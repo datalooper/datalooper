@@ -39,10 +39,14 @@ class DlTrack(Track):
 
     def _on_looper_param_changed(self):
         self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
+        self.send_message("device name:" + str(self.device.name))
+
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
             return
-
-        self.update_state(int(self.state.value))
+        if self.state.value == STOP_STATE and str(self.device.name) == str(CLEAR_STATE):
+            self.update_state(CLEAR_STATE)
+        else:
+            self.update_state(int(self.state.value))
 
     def send_message(self, message):
         self.__parent.send_message(message)
@@ -190,15 +194,17 @@ class DlTrack(Track):
         self.request_control(PLAY_CONTROL)
 
     def update_state(self, state):
-        if (self.lastState == CLEAR_STATE or self.lastState == RECORDING_STATE ) and self.device.name != str(self.lastState):
+        if self.device.name != str(self.lastState):
             self.name_timer.start()
         super(DlTrack, self).update_state(state)
 
     def change_name(self):
+        self.send_message("changing name on dl#" + str(self.trackNum) + " to: " + str(self.lastState)  )
         self.ignore_name_change = True
         self.device.name = str(self.lastState)
 
     def on_name_change(self):
-        if not self.ignore_name_change and str(self.device.name) == CLEAR_STATE:
+        if not self.ignore_name_change and str(self.device.name) == str(CLEAR_STATE):
+            self.send_message("updating state based on device name")
             self.update_state(int(self.device.name))
         self.ignore_name_change = False
