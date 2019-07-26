@@ -18,10 +18,12 @@ class DlTrack(Track):
         self.req_record = True
         self.__parent = parent
         self.req_bpm = False
+        self.tempState = ""
         self.send_message("initializing new track num: " + str(self.trackNum))
         self.update_state(self.lastState)
         self.ignore_name_change = False
         self.ignore_tempo_control = False
+        self.updateReq = False
         self.device.parameters[TEMPO_CONTROL].add_value_listener(self.on_tempo_control_change)
         self.device.add_name_listener(self.on_name_change)
         if self.track.can_be_armed:
@@ -62,6 +64,7 @@ class DlTrack(Track):
 
     def request_control(self, controlNum):
         self.send_message("Requesting control: ")
+        self.updateReq = True
         self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, self.trackNum, (self.trackNum * NUM_CONTROLS) + controlNum)
 
     def record(self, quantized):
@@ -194,14 +197,16 @@ class DlTrack(Track):
         self.request_control(PLAY_CONTROL)
 
     def update_state(self, state):
-        if self.device.name != str(self.lastState):
+        if self.device.name != str(state) and not (state is STOP_STATE and self.device.name is str(CLEAR_STATE)) and self.updateReq:
+            self.updateReq = False
+            self.tempState = state
             self.name_timer.start()
         super(DlTrack, self).update_state(state)
 
     def change_name(self):
         self.send_message("changing name on dl#" + str(self.trackNum) + " to: " + str(self.lastState)  )
         self.ignore_name_change = True
-        self.device.name = str(self.lastState)
+        self.device.name = str(self.tempState)
 
     def on_name_change(self):
         if not self.ignore_name_change and str(self.device.name) == str(CLEAR_STATE):
