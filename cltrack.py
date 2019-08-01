@@ -132,6 +132,9 @@ class ClTrack(Track):
         if not self.track.fired_slot_index_has_listener(self.on_slot_fired):
             self.track.add_fired_slot_index_listener(self.on_slot_fired)
 
+        if not self.track.arm_has_listener(self.on_track_arm_change):
+            self.track.add_arm_listener(self.on_track_arm_change)
+
         if self.clipSlot != -1:
             msg = "Adding cl listeners: "
             if not self.clipSlot.has_clip_has_listener(self.on_clip_change):
@@ -149,9 +152,16 @@ class ClTrack(Track):
         else:
             self.update_state(OFF_STATE)
 
+    def on_track_arm_change(self):
+        if self.lastState != CLEAR_STATE:
+            self.get_new_clip_slot(False)
+            self.update_state(CLEAR_STATE)
+
     def remove_listeners(self):
         if self.track.fired_slot_index_has_listener(self.on_slot_fired):
             self.track.remove_fired_slot_index_listener(self.on_slot_fired)
+        if self.track.arm_has_listener(self.on_track_arm_change):
+            self.track.remove_arm_listener(self.on_track_arm_change)
         if self.clipSlot != -1:
             msg = "Removing cl listeners: "
             if self.clipSlot.has_clip_has_listener(self.on_clip_change):
