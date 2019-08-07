@@ -9,6 +9,7 @@ class DlTrack(Track):
 
     def __init__(self, parent, track, device, trackNum, song, state, action_handler):
         super(DlTrack, self).__init__(parent, track, trackNum, song, state, action_handler)
+        self.updateReq = False
         self.name_timer = Live.Base.Timer(callback=self.change_name, interval=1, repeat=False)
         self.tempo_control = -1
         self.device = device
@@ -17,13 +18,11 @@ class DlTrack(Track):
         self.ignore_stop = False
         self.req_record = True
         self.__parent = parent
-        self.req_bpm = False
         self.tempState = ""
         self.send_message("initializing new track num: " + str(self.trackNum))
         self.update_state(self.lastState)
         self.ignore_name_change = False
         self.ignore_tempo_control = False
-        self.updateReq = False
         self.device.parameters[TEMPO_CONTROL].add_value_listener(self.on_tempo_control_change)
         self.device.add_name_listener(self.on_name_change)
         if self.track.can_be_armed:
@@ -32,8 +31,6 @@ class DlTrack(Track):
         if not self.state.value_has_listener(self._on_looper_param_changed):
             self.state.add_value_listener(self._on_looper_param_changed)
 
-        self.song.add_tempo_listener(self.on_tempo_change)
-        self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
 
     def set_arm(self):
         #self.update_state(CLEAR_STATE)
@@ -78,6 +75,8 @@ class DlTrack(Track):
                 self.rectime = time()
             elif not quantized and self.song.is_playing and self.lastState == RECORDING_STATE:
                 self.state.value = STOP_STATE
+                self.action_handler.change_mode()
+                self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
                 self.calculateBPM(time() - self.rectime)
             elif not quantized and self.lastState == STOP_STATE:
                 self.state.value = PLAYING_STATE
@@ -90,7 +89,10 @@ class DlTrack(Track):
 
     def record_ignoring_state(self):
         self.request_control(RECORD_CONTROL)
-    
+
+    def start(self):
+        self.state.value = PLAYING_STATE
+
     def play(self, quantized):
         if self.lastState == STOP_STATE:
             # self.send_message("attempting play")
@@ -157,31 +159,19 @@ class DlTrack(Track):
 
         bpm = min(bpms, key=lambda x: abs(x - closest_to_tempo))
         self.send_message("bpm: " + str(bpm))
-        self.req_bpm = True
+        self.global_state.queued = self
         self.rectime = 0
+        self.action_handler.jump_to_next_bar()
         self.global_state.updateBPM(bpm)
 
     def change_mode(self):
-        self.send_message("changing mode")
+        # self.send_message("changing mode")
         self.ignore_tempo_control = True
         if self.global_state.mode == LOOPER_MODE:
             self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
         elif self.global_state.mode == NEW_SESSION_MODE:
             self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
             self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
-
-    def on_tempo_change(self):
-        self.timer.start()
-
-    def on_tempo_change_callback(self):
-        self.send_message("on tempo change callback")
-        self.send_message(str(self.req_bpm))
-        if self.req_bpm:
-            self.action_handler.jump_to_next_bar(True)
-            self.req_bpm = False
-            self.update_state(PLAYING_STATE)
-            self.state.value = PLAYING_STATE
-            #self.action_handler.update_mode(LOOPER_MODE)
 
     def remove_track(self):
         if self.track in self.song.tracks:

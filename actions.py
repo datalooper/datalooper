@@ -18,6 +18,10 @@ class Actions:
         self.timerCounter = 0
         self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
         self.quantize_timer = Live.Base.Timer(callback=self.on_quantize_changed_timer_callback, interval=1, repeat=False)
+        # self.song.add_tempo_listener(self.on_tempo_change)
+        self.song.add_current_song_time_listener(self.after_jump)
+        # self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
+        self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
 
         self.scenes = []
         self.clips = []
@@ -52,14 +56,14 @@ class Actions:
         if tracks is not None:
             for track in tracks:
                 if isinstance(track, self.get_looper_type(track_type)):
-                    self.__parent.send_message("calling method " + method_name + " on track name: " + track.track.name + " track num: " + str(track.trackNum))
+                    # self.__parent.send_message("calling method " + method_name + " on track name: " + track.track.name + " track num: " + str(track.trackNum))
                     getattr(track, method_name)(*args)
 
     def call_method_on_all_tracks(self, track_type, method_name, *args):
         for tracks in self.tracks.values():
             for track in tracks:
                 if isinstance(track, self.get_looper_type(track_type)):
-                    self.send_message("calling method" + method_name + " on track: " + track.track.name)
+                    # self.send_message("calling method" + method_name + " on track: " + track.track.name)
                     getattr(track, method_name)(*args)
 
     def check_uniform_state(self, state):
@@ -147,7 +151,7 @@ class Actions:
                 self.scenes.append(linkedScene)
             linkedScene.request_state()
         elif method == "clip_control":
-            self.send_message("requesting state on button number: " + str(data.data1) + " track #" + str(data.data3-1) + " clip #" + str(data.data5-1))
+            # self.send_message("requesting state on button number: " + str(data.data1) + " track #" + str(data.data3-1) + " clip #" + str(data.data5-1))
             linkedClip = self.is_clip_linked(data.data3-1, data.data5-1)
             if not linkedClip:
                 linkedClip = Clip(data.data3-1, data.data5-1, data.data1, self.song, self.state, self)
@@ -155,9 +159,9 @@ class Actions:
             linkedClip.request_state()
         elif method == "looper_control":
             self.call_method_on_tracks(data.data3-1, data.data5, "link_button", data.data1, LOOPER_ACTIONS.get(data.data4))
-            self.send_message("requesting state looper control track num:" + str(data.data3))
+            # self.send_message("requesting state looper control track num:" + str(data.data3))
         elif method == "mute_control":
-            self.send_message("found mute control mute type:" + str(data.data3))
+            # self.send_message("found mute control mute type:" + str(data.data3))
             mute = self.is_mute_linked(data.data1)
             if not mute:
                 mute = Mute(self, data.data1, data.data3, data.data4, self.song, self.tracks)
@@ -257,7 +261,7 @@ class Actions:
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.__parent.send_message("toggling start")
             if data.data2 == 0:
-                self.jump_to_next_bar(False)
+                self.jump_to_next_bar()
             self.call_method_on_all_tracks(track_type, "start", data.data2)
 
         else:
@@ -382,21 +386,37 @@ class Actions:
             elif self.state.metro is not False:
                 self.state.tap_tempo_counter += 1
 
-    def jump_to_next_bar(self, changeBPM):
+    def jump_to_next_bar(self):
+        self.send_message("jumping to next bar")
         self.state.was_recording = self.song.record_mode
         time = int(self.song.current_song_time) + (self.song.signature_denominator - (
                 int(self.song.current_song_time) % self.song.signature_denominator))
         self.state.bpm = self.song.tempo
+        self.send_message("song time: " + str(time))
+        self.state.req_tempo_change = True
         self.song.current_song_time = time
         self.song.record_mode = self.state.was_recording
-        if changeBPM:
-            self.timerCounter = 0
-            self.tempo_change_timer.start()
+        if self.state.queued is not False:
+            self.state.queued.start()
+            self.state.queued = False
 
-    def change_mode(self, data):
-        self.state.change_mode(self.__parent, data.data1)
+        self.send_message("trying playing queued looper " + str(self.state.queued))
+
+    def after_jump(self):
+        self.jumpTimer.start()
+
+    def on_jump_callback(self):
+        if self.state.req_tempo_change:
+            self.song.tempo = self.state.bpm
+
+    def change_mode(self, data=False):
+        if not data:
+            mode = LOOPER_MODE
+        else:
+            mode = data.data1
+        self.state.change_mode(self.__parent, mode)
         self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
-        self.__parent.send_message("mode change to: " + str(data.data1))
+        self.__parent.send_message("mode change to: " + str(mode))
 
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)

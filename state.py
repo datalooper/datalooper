@@ -18,6 +18,8 @@ class State:
         self.sceneOffset = 0
         self.trackOffset = 0
         self.mute_toggled = False
+        self.queued = False
+        self.req_tempo_change = False
 
     def updateBPM(self, bpm):
         self.bpm = bpm
