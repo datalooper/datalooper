@@ -132,6 +132,9 @@ class ClTrack(Track):
         if not self.track.fired_slot_index_has_listener(self.on_slot_fired):
             self.track.add_fired_slot_index_listener(self.on_slot_fired)
 
+        if not self.track.arm_has_listener(self.on_track_arm_change):
+            self.track.add_arm_listener(self.on_track_arm_change)
+
         if self.clipSlot != -1:
             msg = "Adding cl listeners: "
             if not self.clipSlot.has_clip_has_listener(self.on_clip_change):
@@ -149,9 +152,17 @@ class ClTrack(Track):
         else:
             self.update_state(OFF_STATE)
 
+    def on_track_arm_change(self):
+        if self.lastState != CLEAR_STATE and not self.track.arm:
+            self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, CLEAR_STATE)
+        if self.track.arm and self.clipSlot.has_clip and self.clipSlot.clip.is_playing:
+            self.get_new_clip_slot(False)
+
     def remove_listeners(self):
         if self.track.fired_slot_index_has_listener(self.on_slot_fired):
             self.track.remove_fired_slot_index_listener(self.on_slot_fired)
+        if self.track.arm_has_listener(self.on_track_arm_change):
+            self.track.remove_arm_listener(self.on_track_arm_change)
         if self.clipSlot != -1:
             msg = "Removing cl listeners: "
             if self.clipSlot.has_clip_has_listener(self.on_clip_change):
@@ -230,14 +241,14 @@ class ClTrack(Track):
             self.update_state(CLEAR_STATE)
 
     def fire_clip(self, quantized):
-        if self.clipSlot != -1 and quantized and self.track.arm and not self.track.implicit_arm:
+        if self.clipSlot != -1 and quantized and not self.track.implicit_arm:
             if self.song.clip_trigger_quantization != Live.Song.Quantization.q_no_q and self.button_num != -1:
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
             self.clipSlot.fire()
         elif not quantized:
             self.action_handler.disable_quantization()
             self.fire_requested = True
-        else:
+        elif self.track.arm:
             self.__parent.send_message("No Clip Slot Loaded, Cannot fire Clip")
 
     def delete_all(self):

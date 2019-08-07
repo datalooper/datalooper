@@ -17,29 +17,29 @@ class ClMidiTrack(cltrack.ClTrack):
     # 4. Clip is already in memory and recording, meaning clip will play
     #################
     def record(self, quantized):
-        #self.__parent.send_message("in record pressed")
-        if self.clipSlot == -1:
-         #   self.__parent.send_message("starting recording in new slot")
+        self.__parent.send_message("in record pressed, track num " + str(self.track.name))
+        if self.clipSlot == -1 and self.track.arm:
+            self.__parent.send_message("starting recording in new slot")
             # Scenario # 1
             self.get_new_clip_slot(False)
             self.fire_clip(quantized)
-        elif self.clipSlot.has_clip:
-            if self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording:
-          #      self.__parent.send_message("going to overdub")
+        elif self.clipSlot != -1 and self.clipSlot.has_clip:
+            if self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording and self.track.arm:
+                self.__parent.send_message("going to overdub")
                 self.overdub()
                 # Scenario 2
             elif not self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording:
-           #     self.__parent.send_message("playing clip from stopped state")
+                self.__parent.send_message("playing clip from stopped state")
                 # Scenario 3
                 self.fire_clip(quantized)
             elif self.clipSlot.clip.is_recording and not self.clipSlot.clip.is_overdubbing:
                 # Scenario 4
-            #    self.__parent.send_message("ending recording")
+                self.__parent.send_message("ending recording")
                 self.fire_clip(quantized)
             elif self.clipSlot.clip.is_overdubbing:
                 self.endOverdub()
-        elif self.clipSlot != -1 and not self.clipSlot.has_clip:
-            #self.__parent.send_message("recording new clip")
+        elif self.clipSlot != -1 and not self.clipSlot.has_clip  and self.track.arm:
+            self.__parent.send_message("recording new clip")
             # Scenario 5
             self.fire_clip(quantized)
 

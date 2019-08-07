@@ -107,7 +107,6 @@ class DataLooper(ControlSurface):
             self.handle_sysex(midi_bytes)
 
     def handle_sysex(self, midi_bytes):
-
         sysex = Sysex(midi_bytes)
         self.send_message("midi action byte:")
         self.send_message(sysex.action)

@@ -95,7 +95,7 @@ class TrackHandler:
             # checks for devices
             if track.devices:
                 for device in track.devices:
-                    if device.name == "Looper":
+                    if device.class_name == "Looper":
                         msg += track.name
                         self.tracks[str(trackNum)].append(DlTrack(self, track, device, trackNum, self.song, self.state, self.actions))
         elif track_key == CLIPLOOPER_KEY:
