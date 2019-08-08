@@ -183,12 +183,12 @@ class DlTrack(Track):
     def play(self):
         self.request_control(PLAY_CONTROL)
 
-    def update_state(self, state):
-        if self.device.name != str(state) and not (state is STOP_STATE and self.device.name is str(CLEAR_STATE)) and self.updateReq:
-            self.updateReq = False
-            self.tempState = state
-            self.name_timer.start()
-        super(DlTrack, self).update_state(state)
+    # def update_state(self, state):
+        # if self.device.name != str(state) and not (state is STOP_STATE and self.device.name is str(CLEAR_STATE)) and self.updateReq:
+            # self.updateReq = False
+            # self.tempState = state
+            # self.name_timer.start()
+        # super(DlTrack, self).update_state(state)
 
     def change_name(self):
         self.send_message("changing name on dl#" + str(self.trackNum) + " to: " + str(self.lastState)  )

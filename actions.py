@@ -389,16 +389,14 @@ class Actions:
     def jump_to_next_bar(self):
         self.send_message("jumping to next bar")
         self.state.was_recording = self.song.record_mode
+        self.song.record_mode = 0
         time = int(self.song.current_song_time) + (self.song.signature_denominator - (
                 int(self.song.current_song_time) % self.song.signature_denominator))
         self.state.bpm = self.song.tempo
         self.send_message("song time: " + str(time))
         self.state.req_tempo_change = True
+        # self.song.scrub_by(4)
         self.song.current_song_time = time
-        self.song.record_mode = self.state.was_recording
-        if self.state.queued is not False:
-            self.state.queued.state.value = PLAYING_STATE
-            self.state.queued = False
 
         self.send_message("trying playing queued looper " + str(self.state.queued))
 
@@ -408,6 +406,11 @@ class Actions:
     def on_jump_callback(self):
         if self.state.req_tempo_change:
             self.song.tempo = self.state.bpm
+            self.song.record_mode = self.state.was_recording
+            if self.state.queued is not False:
+                self.state.queued.state.value = PLAYING_STATE
+                self.state.queued = False
+            self.state.req_tempo_change = False
 
     def change_mode(self, data=False):
         if not data:

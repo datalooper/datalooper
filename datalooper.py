@@ -110,7 +110,7 @@ class DataLooper(ControlSurface):
         sysex = Sysex(midi_bytes)
         # self.send_message("midi action byte:")
         # self.send_message(sysex.action)
-        # self.send_message(self.get_method(sysex.action))
+        self.send_message(self.get_method(sysex.action))
         getattr(self.__action_handler, self.get_method(sysex.action))(sysex)
 
     def refresh_state(self):
