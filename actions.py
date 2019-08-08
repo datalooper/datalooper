@@ -397,7 +397,7 @@ class Actions:
         self.song.current_song_time = time
         self.song.record_mode = self.state.was_recording
         if self.state.queued is not False:
-            self.state.queued.start()
+            self.state.queued.state.value = PLAYING_STATE
             self.state.queued = False
 
         self.send_message("trying playing queued looper " + str(self.state.queued))

@@ -90,9 +90,6 @@ class DlTrack(Track):
     def record_ignoring_state(self):
         self.request_control(RECORD_CONTROL)
 
-    def start(self):
-        self.state.value = PLAYING_STATE
-
     def play(self, quantized):
         if self.lastState == STOP_STATE:
             # self.send_message("attempting play")
