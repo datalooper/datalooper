@@ -111,10 +111,9 @@ class ClTrack(Track):
     def on_clip_status_change(self):
         state = self.check_clip_state()
         if state == STOP_STATE and self.clipStopping:
+            self.send_message("changing to stop from clip status change")
             self.clipStopping = False
             self.update_state(state)
-        elif state == STOP_STATE and not self.clipStopping:
-            self.update_state(CLEAR_STATE)
         else:
             self.update_state(state)
         #self.__parent.send_message("Clip status change on track # : " + str(self.trackNum) + " CLIP STATE: " + str(state))
@@ -155,7 +154,7 @@ class ClTrack(Track):
     def on_track_arm_change(self):
         if self.lastState != CLEAR_STATE and not self.track.arm:
             self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, CLEAR_STATE)
-        if self.track.arm and self.clipSlot.has_clip and self.clipSlot.clip.is_playing:
+        if self.track.arm and self.clipSlot != -1 and self.clipSlot.has_clip and self.clipSlot.clip.is_playing:
             self.get_new_clip_slot(False)
 
     def remove_listeners(self):
@@ -176,8 +175,8 @@ class ClTrack(Track):
     ###### ACTIONS ######
 
     def stop(self, quantized):
-        #self.send_message("stopping")
-        if self.track.playing_slot_index >= 0:
+        if self.track and self.track.playing_slot_index >= 0:
+            self.send_message("stopping clip track")
             clip_slot = self.track.clip_slots[self.track.playing_slot_index]
             if clip_slot.clip.is_recording and not clip_slot.clip.is_overdubbing:
                 self.send_message("clip is recording, clearing now")
@@ -188,7 +187,8 @@ class ClTrack(Track):
                 self.clipStopping = True
                 clip_slot.clip.stop()
             elif clip_slot.has_clip:
-                #self.send_message("muting")
+                self.send_message("muting")
+                self.clipStopping = True
                 clip_slot.clip.add_muted_listener(self.clip_muted)
                 clip_slot.clip.muted = True
                 self.mutedClip = clip_slot.clip

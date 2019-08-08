@@ -92,15 +92,14 @@ class Track(object):
         pass
 
     def update_state(self, state):
-        # self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
-
-        if state != -1:
+        self.send_message("current monitoring state: " + str(self.track.current_monitoring_state))
+        if self.track and state != -1 :
             if self.lastState != state and self.global_state.mode != NEW_SESSION_MODE and self.button_num is not -1:
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.SLOW_BLINK)
             self.lastState = state
-            if self.button_num is not -1 and not self.led_disabled:
+            if self.button_num is not -1 and not self.led_disabled and ( self.track.arm or self.track.current_monitoring_state is 0):
+                self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
                 self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
-
             if self.lastState == PLAYING_STATE or self.lastState == OVERDUB_STATE:
                 self.global_state.mode = LOOPER_MODE
         # if self.trackNum not in self.__parent.duplicates or (
@@ -109,7 +108,7 @@ class Track(object):
 
     def request_state(self):
         self.send_message("sending requested state on track num: " + str(self.trackNum) + " to state: " + str(self.lastState) + " track name: " + self.track.name + " button number:" + str(self.button_num))
-        if self.button_num != -1 and not self.led_disabled:
+        if self.button_num != -1 and not self.led_disabled and ( self.track.arm or self.track.current_monitoring_state is 0):
             self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
         if self.mute_button != -1:
             if self.track.mute:

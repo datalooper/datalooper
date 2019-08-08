@@ -22,7 +22,7 @@ class Actions:
         self.song.add_current_song_time_listener(self.after_jump)
         # self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
         self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
-
+        self.playing_clips = []
         self.scenes = []
         self.clips = []
         self.mutes = []
@@ -248,27 +248,33 @@ class Actions:
         self.song.clip_trigger_quantization = self.lastQuantization
 
     def toggle_stop_start(self, data):
-        self.send_message("Fade time: " + str(data.data4))
         if data.data1 == 4:
-            track_type = 0
+            track_type = BOTH_TRACK_TYPES
         elif data.data1 == 3:
             track_type = 1
         else:
             track_type = data.data1
 
         self.__parent.send_message("toggling stop/start")
-
+        self.__parent.send_message("uniform clear?: " + str(self.check_uniform_state([CLEAR_STATE])) + " uniform stop or clear state: " + str(self.check_uniform_state([STOP_STATE, CLEAR_STATE])))
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.__parent.send_message("toggling start")
             if data.data2 == 0:
                 self.jump_to_next_bar()
             self.call_method_on_all_tracks(track_type, "start", data.data2)
-
+            if self.playing_clips:
+                for clip in self.playing_clips:
+                    clip.fire()
+                self.playing_clips = []
         else:
             self.__parent.send_message("toggling stop")
             self.call_method_on_all_tracks(track_type, "stop", data.data2)
             if data.data1 == 4 or data.data1 == 3:
-                self.song.stop_all_clips()
+                for track in self.song.tracks:
+                    if track.playing_slot_index > -1 and track.clip_slots[track.playing_slot_index].has_clip and not track.clip_slots[track.playing_slot_index].is_triggered  :
+                        track.clip_slots[track.playing_slot_index].clip.stop()
+                        self.playing_clips.append(track.clip_slots[track.playing_slot_index])
+                # self.song.stop_all_clips()
 
     def new_clips_on_all(self, data):
         self.call_method_on_all_tracks(data, CLIP_TRACK, "new_clip")
@@ -395,10 +401,10 @@ class Actions:
         self.state.bpm = self.song.tempo
         self.send_message("song time: " + str(time))
         self.state.req_tempo_change = True
-        # self.song.scrub_by(4)
         self.song.current_song_time = time
-
-        self.send_message("trying playing queued looper " + str(self.state.queued))
+        if self.state.queued is not False:
+            self.state.queued.state.value = PLAYING_STATE
+            self.state.queued = False
 
     def after_jump(self):
         self.jumpTimer.start()
@@ -407,9 +413,6 @@ class Actions:
         if self.state.req_tempo_change:
             self.song.tempo = self.state.bpm
             self.song.record_mode = self.state.was_recording
-            if self.state.queued is not False:
-                self.state.queued.state.value = PLAYING_STATE
-                self.state.queued = False
             self.state.req_tempo_change = False
 
     def change_mode(self, data=False):
