@@ -395,7 +395,6 @@ class Actions:
         self.state.bpm = self.song.tempo
         self.send_message("song time: " + str(time))
         self.state.req_tempo_change = True
-        # self.song.scrub_by(4)
         self.song.current_song_time = time
 
         self.send_message("trying playing queued looper " + str(self.state.queued))
