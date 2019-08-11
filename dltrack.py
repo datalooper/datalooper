@@ -51,10 +51,10 @@ class DlTrack(Track):
     def on_tempo_control_change(self):
         if not self.ignore_tempo_control:
             self.send_message("changing mode via listener")
-            #if self.device.parameters[TEMPO_CONTROL].value == 0:
-                #self.__parent.send_sysex(CHANGE_MODE_COMMAND, 1)
-            #else:
-                #self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+            if self.device.parameters[TEMPO_CONTROL].value == 0:
+                self.__parent.send_sysex(CHANGE_MODE_COMMAND, 1)
+            else:
+                self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
         self.ignore_tempo_control = False
 
     def request_control(self, controlNum):
@@ -163,7 +163,7 @@ class DlTrack(Track):
         # self.send_message("changing mode")
         self.ignore_tempo_control = True
         if self.global_state.mode == LOOPER_MODE:
-            self.device.parameters[TEMPO_CONTROL].value = self.tempo_control
+            self.device.parameters[TEMPO_CONTROL].value = SET_AND_FOLLOW_SONG_TEMPO
         elif self.global_state.mode == NEW_SESSION_MODE:
             self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
             self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
