@@ -395,8 +395,10 @@ class Actions:
         self.state.bpm = self.song.tempo
         self.send_message("song time: " + str(time))
         self.state.req_tempo_change = True
-        self.song.current_song_time = time
+        self.song.current_song_time = time - ((self.state.bpm / 60000) * 200)
+        self.song.tempo = self.state.bpm
 
+        ## 100 ms ; 100 beats per minute ; 100/60000 beats per ms
         self.send_message("trying playing queued looper " + str(self.state.queued))
 
     def after_jump(self):
@@ -404,12 +406,11 @@ class Actions:
 
     def on_jump_callback(self):
         if self.state.req_tempo_change:
-            self.song.tempo = self.state.bpm
             self.song.record_mode = self.state.was_recording
             if self.state.queued is not False:
-                self.state.queued.state.value = PLAYING_STATE
+                self.state.queued.request_control(MASTER_CONTROL)
                 self.state.queued = False
-            self.state.req_tempo_change = False
+        self.state.req_tempo_change = False
 
     def change_mode(self, data=False):
         if not data:
