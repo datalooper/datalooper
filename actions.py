@@ -7,6 +7,7 @@ import math
 from scene import Scene
 from clip import Clip
 from mute import Mute
+from _Framework import Task
 
 class Actions:
 
@@ -16,13 +17,12 @@ class Actions:
         self.song = song
         self.__parent = parent
         self.timerCounter = 0
-        self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
+        # self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
         self.quantize_timer = Live.Base.Timer(callback=self.on_quantize_changed_timer_callback, interval=1, repeat=False)
-        # self.song.add_tempo_listener(self.on_tempo_change)
-        self.song.add_current_song_time_listener(self.after_jump)
-        # self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
-        self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
-
+        # self.song.add_current_song_time_listener(self.after_jump)
+        self.tempo_timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
+        # self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
+        self.async_timer = Live.Base.Timer(callback=self.async_timer_callback, interval = 1, repeat=False)
         self.scenes = []
         self.clips = []
         self.mutes = []
@@ -394,23 +394,25 @@ class Actions:
                 int(self.song.current_song_time) % self.song.signature_denominator))
         self.state.bpm = self.song.tempo
         self.send_message("song time: " + str(time))
-        self.state.req_tempo_change = True
-        self.song.current_song_time = time - ((self.state.bpm / 60000) * 200)
+        self.song.current_song_time = time - (self.state.bpm / 60000 * 20)
+        self.async_timer.start()
+        self.song.add_tempo_listener(self.on_tempo_change)
         self.song.tempo = self.state.bpm
-
         ## 100 ms ; 100 beats per minute ; 100/60000 beats per ms
         self.send_message("trying playing queued looper " + str(self.state.queued))
 
-    def after_jump(self):
-        self.jumpTimer.start()
+    def async_timer_callback(self):
+        self.state.queued.request_control(MASTER_CONTROL)
+        self.state.queued = False
 
-    def on_jump_callback(self):
-        if self.state.req_tempo_change:
-            self.song.record_mode = self.state.was_recording
-            if self.state.queued is not False:
-                self.state.queued.request_control(MASTER_CONTROL)
-                self.state.queued = False
+    def on_tempo_change(self):
+        self.tempo_timer.start()
+        self.song.remove_tempo_listener(self.on_tempo_change)
+
+    def on_tempo_change_callback(self):
+        self.song.record_mode = self.state.was_recording
         self.state.req_tempo_change = False
+
 
     def change_mode(self, data=False):
         if not data:
@@ -424,14 +426,14 @@ class Actions:
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)
 
-    def execute_tempo_change(self):
-    # kills timer after 50ms just in case it wants to run forever for some reason
-        self.timerCounter += 1
-        if self.song.tempo != self.state.bpm:
-            self.song.tempo = self.state.bpm
-            self.tempo_change_timer.stop()
-        elif self.timerCounter > 50:
-            self.tempo_change_timer.stop()
+    # def execute_tempo_change(self):
+    # # kills timer after 50ms just in case it wants to run forever for some reason
+    #     self.timerCounter += 1
+    #     if self.song.tempo != self.state.bpm:
+    #         self.song.tempo = self.state.bpm
+    #         self.tempo_change_timer.stop()
+    #     elif self.timerCounter > 50:
+    #         self.tempo_change_timer.stop()
 
     def send_message(self, m):
         self.__parent.send_message(m)
