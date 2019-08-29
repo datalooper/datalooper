@@ -16,6 +16,8 @@ class ClTrack(Track):
         self.mutedClip = -1
         self.lastQuantization = -1
         self.muteTimer = Live.Base.Timer(callback=self.on_mute_timer, interval=1, repeat=False)
+        self.clipChangeTimer = Live.Base.Timer(callback=self.on_clip_change_timer, interval=1, repeat=False)
+
         self.fire_requested = False
         self.add_listeners()
 
@@ -27,7 +29,7 @@ class ClTrack(Track):
 
     # manages clip listeners and loads the first empty clip slot location into memory
     def get_new_clip_slot(self, new_scene = False):
-        #self.__parent.send_message("Getting New Clip")
+        self.__parent.send_message("Getting New Clip")
         # clear current clip slot
         self.remove_clip_slot()
 
@@ -106,8 +108,10 @@ class ClTrack(Track):
     def on_clip_change(self):
         #self.__parent.send_message("On Clip Change")
         if self.clipSlot != -1 and not self.clipSlot.has_clip:
-            self.remove_clip()
+            self.clipChangeTimer.start()
 
+    def on_clip_change_timer(self):
+        self.remove_clip()
     def on_clip_status_change(self):
         state = self.check_clip_state()
         if state == STOP_STATE and self.clipStopping:
@@ -146,7 +150,7 @@ class ClTrack(Track):
             msg += " on track #" + str(self.trackNum) + " with track name: " + self.track.name
             self.send_message(msg)
 
-    def remove_track(self):
+    def remove_track(self, on_all = False):
         if self.track in self.song.tracks:
             self.remove_listeners()
         else:
@@ -155,7 +159,10 @@ class ClTrack(Track):
     def on_track_arm_change(self):
         if self.lastState != CLEAR_STATE and not self.track.arm:
             self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, CLEAR_STATE)
-        if self.track.arm and self.clipSlot.has_clip and self.clipSlot.clip.is_playing:
+        # if not self.track.arm:
+        #     self.remove_listeners()
+        #     self.remove_clip_slot()
+        if self.track.arm:
             self.get_new_clip_slot(False)
 
     def remove_listeners(self):
@@ -175,9 +182,9 @@ class ClTrack(Track):
             self.send_message(msg)
     ###### ACTIONS ######
 
-    def stop(self, quantized):
-        #self.send_message("stopping")
-        if self.track.playing_slot_index >= 0:
+    def stop(self, quantized, on_all = False):
+        self.send_message("stopping, on_all = " + str(on_all))
+        if self.track.playing_slot_index >= 0 and (self.track.arm or on_all):
             clip_slot = self.track.clip_slots[self.track.playing_slot_index]
             if clip_slot.clip.is_recording and not clip_slot.clip.is_overdubbing:
                 self.send_message("clip is recording, clearing now")
@@ -216,18 +223,21 @@ class ClTrack(Track):
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
             self.clipSlot.clip.fire()
 
-    def clear_immediately(self):
+    def clear_immediately(self, on_all = False):
         super(ClTrack, self).clear_immediately()
         self.send_message("clearing...")
-        self.remove_clip()
+        if on_all or self.track.arm :
+            self.remove_clip()
 
     def remove_clip(self):
         self.remove_listeners()
         if self.clipSlot != -1 and self.clipSlot.has_clip:
             self.clipSlot.delete_clip()
+        elif self.track.playing_slot_index >= 0:
+            self.track.clip_slots[self.track.playing_slot_index].delete_clip()
         self.get_new_clip_slot(False)
 
-    def remove_clip_slot(self):
+    def remove_clip_slot(self, on_all = False):
         if self.clipSlot != -1:
             if self.clipSlot.has_clip_has_listener(self.on_clip_change):
                 self.clipSlot.remove_has_clip_listener(self.on_clip_change)
@@ -256,7 +266,7 @@ class ClTrack(Track):
             self.clipSlot = clip_slot
             self.remove_clip()
 
-    def record_ignoring_state(self):
+    def record_ignoring_state(self, on_all = False):
         if self.clipSlot == -1 or (self.clipSlot.has_clip and not self.clipSlot.clip.is_recording):
             self.get_new_clip_slot(False)
         elif self.clipSlot.has_clip and self.clipSlot.clip.is_recording:

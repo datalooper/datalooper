@@ -39,7 +39,7 @@ class Track(object):
     def stop(self, quantized):
         pass
 
-    def undo(self):
+    def undo(self, on_all = False):
         pass
 
     def clear(self, fadeTime):
@@ -77,13 +77,13 @@ class Track(object):
         else:
             self.clearTimerCounter += 1
 
-    def clear_immediately(self):
+    def clear_immediately(self, on_all = False):
         if self.parameter is not -1:
             self.parameter.value = self.preClearGain
 
-    def start(self, start_type):
+    def start(self, start_type, on_all = False):
         if self.lastState != CLEAR_STATE:
-            self.record(start_type)
+            self.record(start_type, on_all)
 
     def record(self, quantized):
         pass
@@ -122,31 +122,31 @@ class Track(object):
         self.send_message("disabling led on track name:" + str(self.track.name))
         self.led_disabled = True
 
-    def remove_track(self):
+    def remove_track(self, on_all = False):
         pass
 
-    def change_mode(self):
+    def change_mode(self, on_all = False):
         pass
 
-    def record_quantized(self):
+    def record_quantized(self, on_all = False):
         self.record(True)
 
-    def record_immediately(self):
+    def record_immediately(self, on_all = False):
         self.record(False)
 
-    def record_ignoring_state(self):
+    def record_ignoring_state(self, on_all = False):
         pass
 
-    def stop_quantized(self):
-        self.stop(True)
+    def stop_quantized(self, on_all = False):
+        self.stop(True, on_all)
 
-    def stop_immediately(self):
-        self.stop(False)
+    def stop_immediately(self, on_all = False):
+        self.stop(False, on_all)
 
-    def quick_fade_clear(self):
+    def quick_fade_clear(self, on_all = False):
         self.clear(500)
 
-    def long_fade_clear(self):
+    def long_fade_clear(self, on_all = False):
         self.clear(1500)
 
     def link_button(self, button_num, action):
@@ -158,12 +158,12 @@ class Track(object):
             self.mute_button = button_num
             self.request_state()
 
-    def toggle_mute(self):
+    def toggle_mute(self, on_all = False):
         self.track.mute = not self.track.mute
 
     def on_mute(self):
         self.send_message("track mute changed")
         self.request_state()
 
-    def remove_clip_slot(self):
+    def remove_clip_slot(self, on_all = False):
         pass

@@ -16,7 +16,7 @@ class ClMidiTrack(cltrack.ClTrack):
     # 3. Clip is already in memory and stopped, meaning clip will play
     # 4. Clip is already in memory and recording, meaning clip will play
     #################
-    def record(self, quantized):
+    def record(self, quantized, on_all = False):
         self.__parent.send_message("in record pressed, track num " + str(self.track.name))
         if self.clipSlot == -1 and self.track.arm:
             self.__parent.send_message("starting recording in new slot")
@@ -43,12 +43,12 @@ class ClMidiTrack(cltrack.ClTrack):
             # Scenario 5
             self.fire_clip(quantized)
 
-    def stop(self, quantized):
-        super(ClMidiTrack, self).stop(quantized)
+    def stop(self, quantized, on_all = False):
+        super(ClMidiTrack, self).stop(quantized, on_all)
         if self.clipSlot != -1 and self.clipSlot.has_clip and self.clipSlot.clip.is_overdubbing:
             self.endOverdub()
 
-    def undo(self):
+    def undo(self, on_all = False):
         self.undoOverdub()
 
     def overdub(self):
@@ -81,7 +81,7 @@ class ClMidiTrack(cltrack.ClTrack):
             self.endOverdub()
         super(ClMidiTrack, self).get_new_clip_slot(new_scene)
 
-    def remove_clip_slot(self):
+    def remove_clip_slot(self, on_all = False):
         if self.lastState == OVERDUB_STATE:
             self.endOverdub()
         super(ClMidiTrack, self).remove_clip_slot()

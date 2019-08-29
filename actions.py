@@ -95,9 +95,9 @@ class Actions:
 
         action = LOOPER_ACTIONS.get(data.data2)
         if data.data1 == 0:
-            self.call_method_on_all_tracks(data.data3, action)
+            self.call_method_on_all_tracks(data.data3, action, True)
         else:
-            self.call_method_on_tracks(data.data1-1, data.data3, action)
+            self.call_method_on_tracks(data.data1-1, data.data3, action, False)
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
@@ -261,11 +261,11 @@ class Actions:
             self.__parent.send_message("toggling start")
             if data.data2 == 0:
                 self.jump_to_next_bar()
-            self.call_method_on_all_tracks(track_type, "start", data.data2)
+            self.call_method_on_all_tracks(track_type, "start", data.data2, True)
 
         else:
             self.__parent.send_message("toggling stop")
-            self.call_method_on_all_tracks(track_type, "stop", data.data2)
+            self.call_method_on_all_tracks(track_type, "stop", data.data2, True)
             if data.data1 == 4 or data.data1 == 3:
                 self.song.stop_all_clips()
 
@@ -397,11 +397,13 @@ class Actions:
         if self.state.queued is not False:
             self.state.queued.request_control(MASTER_CONTROL)
             self.state.queued = False
-        if self.song.tempo_has_listener(self.on_tempo_change):
-            self.song.remove_tempo_listener(self.on_tempo_change)
-        self.song.add_tempo_listener(self.on_tempo_change)
-        self.song.tempo = self.state.bpm
-
+        if self.song.tempo != self.state.bpm:
+            if self.song.tempo_has_listener(self.on_tempo_change):
+                self.song.remove_tempo_listener(self.on_tempo_change)
+            self.song.add_tempo_listener(self.on_tempo_change)
+            self.song.tempo = self.state.bpm
+        else:
+            self.song.record_mode = self.state.was_recording
 
 
         ## 100 ms ; 100 beats per minute ; 100/60000 beats per ms
@@ -413,7 +415,6 @@ class Actions:
 
     def on_tempo_change_callback(self):
         self.song.record_mode = self.state.was_recording
-        self.state.req_tempo_change = False
 
 
     def change_mode(self, data=False):

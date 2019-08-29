@@ -62,7 +62,7 @@ class DlTrack(Track):
         self.updateReq = True
         self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, self.trackNum, (self.trackNum * NUM_CONTROLS) + controlNum)
 
-    def record(self, quantized):
+    def record(self, quantized, on_all = False):
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         if self.rectime == 0 or (time() - self.rectime) > .5:
@@ -85,7 +85,7 @@ class DlTrack(Track):
                     self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
                 self.request_control(MASTER_CONTROL)
 
-    def record_ignoring_state(self):
+    def record_ignoring_state(self, on_all = False):
         self.request_control(RECORD_CONTROL)
 
     def play(self, quantized):
@@ -97,7 +97,7 @@ class DlTrack(Track):
                 self.state.value = PLAYING_STATE
             self.update_state(PLAYING_STATE)
 
-    def stop(self, quantized):
+    def stop(self, quantized, on_all = False):
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " stop pressed")
         if self.lastState == RECORDING_STATE:
@@ -124,14 +124,14 @@ class DlTrack(Track):
         elif self.lastState == PLAYING_STATE:
             self.request_control(STOP_CONTROL)
 
-    def undo(self):
+    def undo(self, on_all = False):
         if self.lastState != CLEAR_STATE or not self.song.is_playing:
             self.request_control(UNDO_CONTROL)
 
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
 
-    def clear_immediately(self):
+    def clear_immediately(self, on_all = False):
         super(DlTrack, self).clear_immediately()
         if self.lastState == OVERDUB_STATE:
             self.state.value = STOP_STATE
@@ -159,7 +159,7 @@ class DlTrack(Track):
         self.action_handler.jump_to_next_bar()
         self.global_state.updateBPM(bpm)
 
-    def change_mode(self):
+    def change_mode(self, on_all = False):
         # self.send_message("changing mode")
         self.ignore_tempo_control = True
         if self.global_state.mode == LOOPER_MODE:
@@ -168,7 +168,7 @@ class DlTrack(Track):
             self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
             self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
 
-    def remove_track(self):
+    def remove_track(self, on_all = False):
         if self.track in self.song.tracks:
             if self.track.can_be_armed and self.track.arm_has_listener(self.set_arm):
                 self.track.remove_arm_listener(self.set_arm)
@@ -178,7 +178,7 @@ class DlTrack(Track):
             self.send_message("removing track: " + str(self.trackNum))
             self.update_state(OFF_STATE)
 
-    def play(self):
+    def play(self, on_all = False):
         self.request_control(PLAY_CONTROL)
 
     def update_state(self, state):
