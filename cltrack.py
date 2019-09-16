@@ -113,23 +113,25 @@ class ClTrack(Track):
     def on_clip_change_timer(self):
         self.remove_clip()
     def on_clip_status_change(self):
-        state = self.check_clip_state()
-        if state == STOP_STATE and self.clipStopping:
-            self.clipStopping = False
-            self.update_state(state)
-        elif state == STOP_STATE and not self.clipStopping:
-            self.update_state(CLEAR_STATE)
-        else:
-            self.update_state(state)
+        if self.track.arm:
+            state = self.check_clip_state()
+            if state == STOP_STATE and self.clipStopping:
+                self.clipStopping = False
+                self.update_state(state)
+            elif state == STOP_STATE and not self.clipStopping:
+                self.update_state(CLEAR_STATE)
+            else:
+                self.update_state(state)
         #self.__parent.send_message("Clip status change on track # : " + str(self.trackNum) + " CLIP STATE: " + str(state))
 
     def on_slot_fired(self):
         #self.send_message("On slot fired. Track # " + str(self.trackNum) + " Track Name: " +  self.track.name + " State: " + str(self.check_clip_state()) + " Fired Slot Index: " + str(self.track.fired_slot_index) + " Playing Slot Index" + str(self.track.playing_slot_index) )
-        if (self.track.fired_slot_index >= 0 and self.clipSlot != self.track.clip_slots[self.track.fired_slot_index]) or (self.track.playing_slot_index >= 0 and self.clipSlot != self.track.clip_slots[self.track.playing_slot_index]):
-            self.clipSlot = self.track.clip_slots[self.track.playing_slot_index]
-            self.send_message("adding listener from on_slot_fired. track #" + str(self.trackNum) + " track name: " + self.track.name)
-            self.add_listeners()
-        self.update_state(self.check_clip_state())
+        if self.track.arm:
+            if (self.track.fired_slot_index >= 0 and self.clipSlot != self.track.clip_slots[self.track.fired_slot_index]) or (self.track.playing_slot_index >= 0 and self.clipSlot != self.track.clip_slots[self.track.playing_slot_index]):
+                self.clipSlot = self.track.clip_slots[self.track.playing_slot_index]
+                self.send_message("adding listener from on_slot_fired. track #" + str(self.trackNum) + " track name: " + self.track.name)
+                self.add_listeners()
+            self.update_state(self.check_clip_state())
 
     def add_listeners(self):
         # add listeners
@@ -159,9 +161,6 @@ class ClTrack(Track):
     def on_track_arm_change(self):
         if self.lastState != CLEAR_STATE and not self.track.arm:
             self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, CLEAR_STATE)
-        # if not self.track.arm:
-        #     self.remove_listeners()
-        #     self.remove_clip_slot()
         if self.track.arm:
             self.get_new_clip_slot(False)
 

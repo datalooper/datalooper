@@ -28,7 +28,7 @@ class ClMidiTrack(cltrack.ClTrack):
                 self.__parent.send_message("going to overdub")
                 self.overdub()
                 # Scenario 2
-            elif not self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording:
+            elif not self.clipSlot.clip.is_playing and not self.clipSlot.clip.is_recording and (self.track.arm or on_all):
                 self.__parent.send_message("playing clip from stopped state")
                 # Scenario 3
                 self.fire_clip(quantized)
