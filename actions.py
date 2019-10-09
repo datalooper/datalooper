@@ -16,13 +16,17 @@ class Actions:
         self.song = song
         self.__parent = parent
         self.timerCounter = 0
-        self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
+        # self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
         self.quantize_timer = Live.Base.Timer(callback=self.on_quantize_changed_timer_callback, interval=1, repeat=False)
         # self.song.add_tempo_listener(self.on_tempo_change)
         self.song.add_current_song_time_listener(self.after_jump)
         # self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
         self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
         self.playing_clips = []
+        # self.song.add_current_song_time_listener(self.after_jump)
+        self.tempo_timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
+        # self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
+
         self.scenes = []
         self.clips = []
         self.mutes = []
@@ -96,9 +100,9 @@ class Actions:
 
         action = LOOPER_ACTIONS.get(data.data2)
         if data.data1 == 0:
-            self.call_method_on_all_tracks(data.data3, action)
+            self.call_method_on_all_tracks(data.data3, action, True)
         else:
-            self.call_method_on_tracks(data.data1-1, data.data3, action)
+            self.call_method_on_tracks(data.data1-1, data.data3, action, False)
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
@@ -266,9 +270,10 @@ class Actions:
                 for clip in self.playing_clips:
                     clip.fire()
                 self.playing_clips = []
+            self.call_method_on_all_tracks(track_type, "start", data.data2, True)
         else:
             self.__parent.send_message("toggling stop")
-            self.call_method_on_all_tracks(track_type, "stop", data.data2)
+            self.call_method_on_all_tracks(track_type, "stop", data.data2, True)
             if data.data1 == 4 or data.data1 == 3:
                 for track in self.song.tracks:
                     if track.playing_slot_index > -1 and track.clip_slots[track.playing_slot_index].has_clip and not track.clip_slots[track.playing_slot_index].is_triggered  :
@@ -405,9 +410,28 @@ class Actions:
         if self.state.queued is not False:
             self.state.queued.state.value = PLAYING_STATE
             self.state.queued = False
+        self.song.current_song_time = time - (self.state.bpm / 60000 * 40)
+        if self.state.queued is not False:
+            self.state.queued.request_control(MASTER_CONTROL)
+            self.state.queued = False
+        if self.song.tempo != self.state.bpm:
+            if self.song.tempo_has_listener(self.on_tempo_change):
+                self.song.remove_tempo_listener(self.on_tempo_change)
+            self.song.add_tempo_listener(self.on_tempo_change)
+            self.song.tempo = self.state.bpm
+        else:
+            self.song.record_mode = self.state.was_recording
 
-    def after_jump(self):
-        self.jumpTimer.start()
+
+        ## 100 ms ; 100 beats per minute ; 100/60000 beats per ms
+        self.send_message("trying playing queued looper " + str(self.state.queued))
+
+    def on_tempo_change(self):
+        self.tempo_timer.start()
+        self.song.remove_tempo_listener(self.on_tempo_change)
+
+    def on_tempo_change_callback(self):
+        self.song.record_mode = self.state.was_recording
 
     def on_jump_callback(self):
         if self.state.req_tempo_change:
@@ -427,14 +451,14 @@ class Actions:
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)
 
-    def execute_tempo_change(self):
-    # kills timer after 50ms just in case it wants to run forever for some reason
-        self.timerCounter += 1
-        if self.song.tempo != self.state.bpm:
-            self.song.tempo = self.state.bpm
-            self.tempo_change_timer.stop()
-        elif self.timerCounter > 50:
-            self.tempo_change_timer.stop()
+    # def execute_tempo_change(self):
+    # # kills timer after 50ms just in case it wants to run forever for some reason
+    #     self.timerCounter += 1
+    #     if self.song.tempo != self.state.bpm:
+    #         self.song.tempo = self.state.bpm
+    #         self.tempo_change_timer.stop()
+    #     elif self.timerCounter > 50:
+    #         self.tempo_change_timer.stop()
 
     def send_message(self, m):
         self.__parent.send_message(m)
