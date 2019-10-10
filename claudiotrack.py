@@ -17,7 +17,7 @@ class ClAudioTrack(cltrack.ClTrack):
     # 2. Clip is already in memory and recording, meaning clip will play
     # 3. Clip is playing, new clip found and recording starts
     #################
-    def record(self, quantized):
+    def record(self, quantized, on_all = False):
         self.__parent.send_message("record pressed")
 
         if self.clipSlot == -1 or self.clipSlot.is_playing and not self.clipSlot.is_recording:
@@ -25,5 +25,5 @@ class ClAudioTrack(cltrack.ClTrack):
         if not self.clipSlot.is_playing or self.clipSlot.is_recording:
             self.fire_clip(quantized)
 
-    def undo(self):
+    def undo(self, on_all = False):
         self.get_new_clip_slot(False)
