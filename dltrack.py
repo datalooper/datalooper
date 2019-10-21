@@ -35,14 +35,13 @@ class DlTrack(Track):
         self.update_state(CLEAR_STATE)
 
     def _on_looper_param_changed(self):
-        self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
-        self.send_message("device name:" + str(self.device.name))
-
         if self.lastState == CLEAR_STATE and self.state.value == STOP_STATE:
             return
         if self.state.value == STOP_STATE and str(self.device.name) == str(CLEAR_STATE):
             self.update_state(CLEAR_STATE)
-        else:
+        elif self.lastState != self.state.value:
+            self.send_message("Looper param changed. Last State: " + str(self.lastState) + " New State: " + str(self.state.value))
+            self.send_message("device name:" + str(self.device.name))
             self.update_state(int(self.state.value))
 
     def send_message(self, message):
@@ -50,7 +49,7 @@ class DlTrack(Track):
 
     def on_tempo_control_change(self):
         if not self.ignore_tempo_control:
-            self.send_message("changing mode via listener")
+            # self.send_message("changing mode via listener")
             if self.device.parameters[TEMPO_CONTROL].value == 0:
                 self.__parent.send_sysex(CHANGE_MODE_COMMAND, 1)
             else:
@@ -68,8 +67,8 @@ class DlTrack(Track):
         if self.rectime == 0 or (time() - self.rectime) > .5:
             if not quantized and self.song.is_playing and self.lastState == CLEAR_STATE:
                 self.send_message("updating to record state")
+                self.updateReq = True
                 self.state.value = RECORDING_STATE
-                self.update_state(RECORDING_STATE)
                 self.rectime = time()
             elif not quantized and self.song.is_playing and self.lastState == RECORDING_STATE:
                 self.state.value = STOP_STATE
@@ -77,6 +76,7 @@ class DlTrack(Track):
                 self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
                 self.calculateBPM(time() - self.rectime)
             elif not quantized and self.lastState == STOP_STATE:
+                self.updateReq = True
                 self.state.value = PLAYING_STATE
             else:
                 # self.send_message("rectime: " + str(time() - self.rectime))
@@ -111,6 +111,7 @@ class DlTrack(Track):
                     self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
             else:
                 # self.send_message("entering stop state")
+                self.updateReq = True
                 self.update_state(STOP_STATE)
                 self.state.value = STOP_STATE
 

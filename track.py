@@ -93,9 +93,10 @@ class Track(object):
 
     def update_state(self, state):
         if self.track and state != -1 :
-            self.send_message("current monitoring state: " + str(self.track.current_monitoring_state))
+            # self.send_message("current monitoring state: " + str(self.track.current_monitoring_state))
             if self.lastState != state and self.global_state.mode != NEW_SESSION_MODE and self.button_num is not -1:
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.SLOW_BLINK)
+            self.send_message("in update state, updating lastState to " + str(state))
             self.lastState = state
             if self.button_num is not -1 and not self.led_disabled and ( self.track.arm or self.track.current_monitoring_state is 0):
                 self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
