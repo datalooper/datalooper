@@ -7,6 +7,7 @@ import math
 from scene import Scene
 from clip import Clip
 from mute import Mute
+from collections import defaultdict
 
 class Actions:
 
@@ -21,11 +22,11 @@ class Actions:
         # self.song.add_tempo_listener(self.on_tempo_change)
         # self.song.add_current_song_time_listener(self.after_jump)
         # self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
-        self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
+        self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=300, repeat=False)
         self.playing_clips = []
         # self.song.add_current_song_time_listener(self.after_jump)
         self.tempo_timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
-        # self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=1, repeat=False)
+        self.rec_timer = Live.Base.Timer(callback=self.on_rec_callback, interval=1, repeat=False)
 
         self.scenes = []
         self.clips = []
@@ -433,11 +434,11 @@ class Actions:
     def on_tempo_change_callback(self):
         self.song.record_mode = self.state.was_recording
 
-    def on_jump_callback(self):
-        if self.state.req_tempo_change:
-            self.song.tempo = self.state.bpm
-            self.song.record_mode = self.state.was_recording
-            self.state.req_tempo_change = False
+    # def on_jump_callback(self):
+    #     if self.state.req_tempo_change:
+    #         self.song.tempo = self.state.bpm
+    #         self.song.record_mode = self.state.was_recording
+    #         self.state.req_tempo_change = False
 
     def change_mode(self, data=False):
         if not data:
@@ -447,6 +448,55 @@ class Actions:
         self.state.change_mode(self.__parent, mode)
         self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
         self.__parent.send_message("mode change to: " + str(mode))
+
+        if mode == NEW_SESSION_MODE and self.song.record_mode:
+            self.volArray = []
+            self.panArray = []
+            self.sendArray = defaultdict(list)
+            self.paramArray = []
+            for track in self.song.tracks:
+                self.send_message("track: " + str(track.name) + " vol:" + str(track.mixer_device.volume.value))
+                self.volArray.append(track.mixer_device.volume.value)
+                self.panArray.append(track.mixer_device.panning.value)
+                self.send_message("track: " + str(track.name) + " pan:" + str(int((track.mixer_device.panning.value + 1) * 63.5)))
+                for idx, send in enumerate(track.mixer_device.sends):
+                    if idx < 2:
+                        self.sendArray[track.name].append(send.value)
+                for device in track.devices:
+                    for param in device.parameters:
+                        self.paramArray.append(param.value)
+
+            self.song.add_record_mode_listener(self.on_record_mode_changed)
+            self.song.record_mode = False
+
+    def on_record_mode_changed(self):
+        self.rec_timer.start()
+        self.song.remove_record_mode_listener(self.on_record_mode_changed)
+
+    def on_rec_callback(self):
+        if self.song.record_mode:
+            pass
+        else:
+            self.song.add_record_mode_listener(self.on_record_mode_changed)
+            paramNum = 0
+            for idx, track in enumerate(self.song.tracks):
+                if track.mixer_device.volume.value != self.volArray[idx]:
+                    self.send_sysex(13, idx, int(self.volArray[idx] * 127, 1))
+                if track.mixer_device.panning.value != self.panArray[idx]:
+                    self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5) , 2)
+                for sendNum, send in enumerate(track.mixer_device.sends):
+                    if sendNum < 2 and send.value != self.sendArray[track.name][sendNum] :
+                        self.send_sysex(13, idx, int(self.sendArray[track.name][sendNum] * 127), 3 + sendNum)
+                # potentially not necessary to go through every param and compare...could try set operation and ableton may have its own check
+                for device in track.devices:
+                    for param in device.parameters:
+                        if param.value != self.paramArray[paramNum]:
+                            param.value = self.paramArray[paramNum]
+                        paramNum += 1
+            self.jumpTimer.start()
+
+    def on_jump_callback(self):
+        self.song.record_mode = True
 
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)

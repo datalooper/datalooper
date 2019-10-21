@@ -162,11 +162,12 @@ class DlTrack(Track):
     def change_mode(self, on_all = False):
         # self.send_message("changing mode")
         self.ignore_tempo_control = True
-        if self.global_state.mode == LOOPER_MODE:
-            self.device.parameters[TEMPO_CONTROL].value = SET_AND_FOLLOW_SONG_TEMPO
-        elif self.global_state.mode == NEW_SESSION_MODE:
-            self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
-            self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
+        if self.device:
+            if self.global_state.mode == LOOPER_MODE:
+                self.device.parameters[TEMPO_CONTROL].value = SET_AND_FOLLOW_SONG_TEMPO
+            elif self.global_state.mode == NEW_SESSION_MODE:
+                self.tempo_control = self.device.parameters[TEMPO_CONTROL].value
+                self.device.parameters[TEMPO_CONTROL].value = NO_TEMPO_CONTROL
 
     def remove_track(self, on_all = False):
         if self.track in self.song.tracks:
@@ -182,7 +183,7 @@ class DlTrack(Track):
         self.request_control(PLAY_CONTROL)
 
     def update_state(self, state):
-        if self.device.name != str(state) and not (state is STOP_STATE and self.device.name is str(CLEAR_STATE)) and self.updateReq:
+        if self.device and self.device.name != str(state) and not (state is STOP_STATE and self.device.name is str(CLEAR_STATE)) and self.updateReq:
             self.updateReq = False
             self.tempState = state
             self.name_timer.start()

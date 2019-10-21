@@ -92,8 +92,8 @@ class Track(object):
         pass
 
     def update_state(self, state):
-        self.send_message("current monitoring state: " + str(self.track.current_monitoring_state))
         if self.track and state != -1 :
+            self.send_message("current monitoring state: " + str(self.track.current_monitoring_state))
             if self.lastState != state and self.global_state.mode != NEW_SESSION_MODE and self.button_num is not -1:
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.SLOW_BLINK)
             self.lastState = state
