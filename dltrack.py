@@ -72,8 +72,8 @@ class DlTrack(Track):
                 self.rectime = time()
             elif not quantized and self.song.is_playing and self.lastState == RECORDING_STATE:
                 self.state.value = STOP_STATE
-                self.action_handler.change_mode()
-                self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+                # self.action_handler.change_mode()
+                # self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
                 self.calculateBPM(time() - self.rectime)
             elif not quantized and self.lastState == STOP_STATE:
                 self.updateReq = True
@@ -157,8 +157,8 @@ class DlTrack(Track):
         self.send_message("bpm: " + str(bpm))
         self.global_state.queued = self
         self.rectime = 0
+        self.global_state.bpm = bpm
         self.action_handler.jump_to_next_bar()
-        self.global_state.updateBPM(bpm)
 
     def change_mode(self, on_all = False):
         # self.send_message("changing mode")

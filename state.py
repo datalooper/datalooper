@@ -23,7 +23,6 @@ class State:
 
     def updateBPM(self, bpm):
         self.bpm = bpm
-        self.song.tempo = self.bpm
 
     def change_mode(self, parent, mode):
         self.mode = mode

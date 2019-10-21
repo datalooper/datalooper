@@ -23,10 +23,10 @@ class Actions:
         # self.song.add_current_song_time_listener(self.after_jump)
         # self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
         self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=300, repeat=False)
-        self.startStopTimer = Live.Base.Timer(callback=self.on_start_stop_callback, interval=1, repeat=False)
+        # self.startStopTimer = Live.Base.Timer(callback=self.on_start_stop_callback, interval=1, repeat=False)
 
         self.playing_clips = []
-        self.tempo_timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
+        # self.tempo_timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
         self.rec_timer = Live.Base.Timer(callback=self.on_rec_callback, interval=1, repeat=False)
 
         self.scenes = []
@@ -403,46 +403,44 @@ class Actions:
         self.send_message("jumping to next bar")
         self.state.was_recording = self.song.record_mode
         self.song.record_mode = 0
+        self.song.tempo = self.state.bpm
+
         time = int(self.song.current_song_time) + (self.song.signature_denominator - (
                 int(self.song.current_song_time) % self.song.signature_denominator))
-        self.state.bpm = self.song.tempo
         self.send_message("song time: " + str(time))
-        self.state.req_tempo_change = True
-        # self.song.add_current_song_time_listener(self.after_jump)
         self.song.current_song_time = time - (self.state.bpm / 60000 * 40)
         if self.state.queued is not False:
             self.state.queued.request_control(MASTER_CONTROL)
             self.state.queued = False
-
-        ## 100 ms ; 100 beats per minute ; 100/60000 beats per ms
-        self.send_message("trying playing queued looper " + str(self.state.queued))
-        if self.song.tempo != self.state.bpm:
-            if self.song.tempo_has_listener(self.on_tempo_change):
-                self.song.remove_tempo_listener(self.on_tempo_change)
-            self.song.add_tempo_listener(self.on_tempo_change)
-            self.song.tempo = self.state.bpm
-        else:
-            self.song.record_mode = self.state.was_recording
-
-    def after_jump(self):
-        self.song.remove_current_song_time_listener(self.after_jump)
-        self.startStopTimer.start()
-
-    def on_start_stop_callback(self):
-        if self.song.tempo != self.state.bpm:
-            if self.song.tempo_has_listener(self.on_tempo_change):
-                self.song.remove_tempo_listener(self.on_tempo_change)
-            self.song.add_tempo_listener(self.on_tempo_change)
-            self.song.tempo = self.state.bpm
-        else:
-            self.song.record_mode = self.state.was_recording
-
-    def on_tempo_change(self):
-        self.tempo_timer.start()
-        self.song.remove_tempo_listener(self.on_tempo_change)
-
-    def on_tempo_change_callback(self):
         self.song.record_mode = self.state.was_recording
+
+        # if self.song.tempo != self.state.bpm:
+        #     if self.song.tempo_has_listener(self.on_tempo_change):
+        #         self.song.remove_tempo_listener(self.on_tempo_change)
+        #     self.song.add_tempo_listener(self.on_tempo_change)
+        #     self.song.tempo = self.state.bpm
+        # else:
+        #     self.song.record_mode = self.state.was_recording
+
+    # def after_jump(self):
+    #     self.song.remove_current_song_time_listener(self.after_jump)
+    #     self.startStopTimer.start()
+    #
+    # def on_start_stop_callback(self):
+    #     if self.song.tempo != self.state.bpm:
+    #         if self.song.tempo_has_listener(self.on_tempo_change):
+    #             self.song.remove_tempo_listener(self.on_tempo_change)
+    #         self.song.add_tempo_listener(self.on_tempo_change)
+    #         self.song.tempo = self.state.bpm
+    #     else:
+    #         self.song.record_mode = self.state.was_recording
+    #
+    # def on_tempo_change(self):
+    #     self.tempo_timer.start()
+    #     self.song.remove_tempo_listener(self.on_tempo_change)
+    #
+    # def on_tempo_change_callback(self):
+    #     self.song.record_mode = self.state.was_recording
 
     # def on_jump_callback(self):
     #     if self.state.req_tempo_change:
