@@ -72,8 +72,6 @@ class DlTrack(Track):
                 self.rectime = time()
             elif not quantized and self.song.is_playing and self.lastState == RECORDING_STATE:
                 self.state.value = STOP_STATE
-                # self.action_handler.change_mode()
-                # self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
                 self.calculateBPM(time() - self.rectime)
             elif not quantized and self.lastState == STOP_STATE:
                 self.updateReq = True

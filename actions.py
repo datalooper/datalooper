@@ -414,6 +414,9 @@ class Actions:
             self.state.queued = False
         self.song.record_mode = self.state.was_recording
 
+        self.change_mode()
+        self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+
         # if self.song.tempo != self.state.bpm:
         #     if self.song.tempo_has_listener(self.on_tempo_change):
         #         self.song.remove_tempo_listener(self.on_tempo_change)
