@@ -261,6 +261,7 @@ class Actions:
         else:
             track_type = data.data1
 
+        self.state.should_record = self.song.record_mode
         self.__parent.send_message("toggling stop/start")
         self.__parent.send_message("uniform clear?: " + str(self.check_uniform_state([CLEAR_STATE])) + " uniform stop or clear state: " + str(self.check_uniform_state([STOP_STATE, CLEAR_STATE])))
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
@@ -401,7 +402,7 @@ class Actions:
 
     def jump_to_next_bar(self):
         self.send_message("jumping to next bar")
-        self.state.was_recording = self.song.record_mode
+        self.state.was_recording = self.state.should_record
         self.song.record_mode = 0
         self.song.tempo = self.state.bpm
 
@@ -461,6 +462,7 @@ class Actions:
         self.__parent.send_message("mode change to: " + str(mode))
 
         if mode == NEW_SESSION_MODE and self.song.record_mode:
+            self.state.should_record = self.song.record_mode
             self.volArray = []
             self.panArray = []
             self.sendArray = defaultdict(list)
@@ -492,9 +494,9 @@ class Actions:
             paramNum = 0
             for idx, track in enumerate(self.song.tracks):
                 if track.mixer_device.volume.value != self.volArray[idx]:
-                    self.send_sysex(13, idx, int(self.volArray[idx] * 127, 1))
+                    self.send_sysex(13, idx, int(self.volArray[idx] * 127), 1)
                 if track.mixer_device.panning.value != self.panArray[idx]:
-                    self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5) , 2)
+                    self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5), 2)
                 for sendNum, send in enumerate(track.mixer_device.sends):
                     if sendNum < 2 and send.value != self.sendArray[track.name][sendNum] :
                         self.send_sysex(13, idx, int(self.sendArray[track.name][sendNum] * 127), 3 + sendNum)
@@ -504,7 +506,7 @@ class Actions:
                         if param.value != self.paramArray[paramNum]:
                             param.value = self.paramArray[paramNum]
                         paramNum += 1
-            self.jumpTimer.start()
+            #self.jumpTimer.start()
 
     def on_jump_callback(self):
         self.song.record_mode = True

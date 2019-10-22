@@ -20,6 +20,7 @@ class State:
         self.mute_toggled = False
         self.queued = False
         self.req_tempo_change = False
+        self.should_record = song.record_mode
 
     def updateBPM(self, bpm):
         self.bpm = bpm
