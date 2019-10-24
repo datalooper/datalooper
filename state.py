@@ -21,12 +21,14 @@ class State:
         self.queued = False
         self.req_tempo_change = False
         self.should_record = song.record_mode
+        self.ignore_tempo_control = False
 
     def updateBPM(self, bpm):
         self.bpm = bpm
 
     def change_mode(self, parent, mode):
         self.mode = mode
+        self.ignore_tempo_control = True
         if mode == LOOPER_MODE:
             self.song.metronome = self.metro
             self.tap_tempo_counter = 0

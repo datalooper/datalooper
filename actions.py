@@ -458,6 +458,7 @@ class Actions:
         else:
             mode = data.data1
         self.state.change_mode(self.__parent, mode)
+
         self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
         self.__parent.send_message("mode change to: " + str(mode))
 
@@ -481,6 +482,8 @@ class Actions:
 
             self.song.add_record_mode_listener(self.on_record_mode_changed)
             self.song.record_mode = False
+        elif mode == LOOPER_MODE:
+            self.song.record_mode = self.state.should_record
 
     def on_record_mode_changed(self):
         self.rec_timer.start()
@@ -493,10 +496,8 @@ class Actions:
             self.song.add_record_mode_listener(self.on_record_mode_changed)
             paramNum = 0
             for idx, track in enumerate(self.song.tracks):
-                if track.mixer_device.volume.value != self.volArray[idx]:
-                    self.send_sysex(13, idx, int(self.volArray[idx] * 127), 1)
-                if track.mixer_device.panning.value != self.panArray[idx]:
-                    self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5), 2)
+                self.send_sysex(13, idx, int(self.volArray[idx] * 127), 1)
+                self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5), 2)
                 for sendNum, send in enumerate(track.mixer_device.sends):
                     if sendNum < 2 and send.value != self.sendArray[track.name][sendNum] :
                         self.send_sysex(13, idx, int(self.sendArray[track.name][sendNum] * 127), 3 + sendNum)

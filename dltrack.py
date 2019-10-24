@@ -22,7 +22,6 @@ class DlTrack(Track):
         self.send_message("initializing new track num: " + str(self.trackNum))
         self.update_state(self.lastState)
         self.ignore_name_change = False
-        self.ignore_tempo_control = False
         self.device.parameters[TEMPO_CONTROL].add_value_listener(self.on_tempo_control_change)
         self.device.add_name_listener(self.on_name_change)
         if self.track.can_be_armed:
@@ -48,13 +47,12 @@ class DlTrack(Track):
         self.__parent.send_message(message)
 
     def on_tempo_control_change(self):
-        if not self.ignore_tempo_control:
+        if not self.global_state.ignore_tempo_control:
             # self.send_message("changing mode via listener")
             if self.device.parameters[TEMPO_CONTROL].value == 0:
                 self.__parent.send_sysex(CHANGE_MODE_COMMAND, 1)
             else:
                 self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
-        self.ignore_tempo_control = False
 
     def request_control(self, controlNum):
         self.send_message("Requesting control: ")
@@ -160,7 +158,6 @@ class DlTrack(Track):
 
     def change_mode(self, on_all = False):
         # self.send_message("changing mode")
-        self.ignore_tempo_control = True
         if self.device:
             if self.global_state.mode == LOOPER_MODE:
                 self.device.parameters[TEMPO_CONTROL].value = SET_AND_FOLLOW_SONG_TEMPO
