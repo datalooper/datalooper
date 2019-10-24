@@ -464,6 +464,9 @@ class Actions:
 
         if mode == NEW_SESSION_MODE and self.song.record_mode:
             self.state.should_record = self.song.record_mode
+            # [track][name][value]...build array at beginning of project, set listener for movement...if movement, set flag to re-send param
+            # after sending out param, set 'first time' value to false
+
             self.volArray = []
             self.panArray = []
             self.sendArray = defaultdict(list)
@@ -496,8 +499,10 @@ class Actions:
             self.song.add_record_mode_listener(self.on_record_mode_changed)
             paramNum = 0
             for idx, track in enumerate(self.song.tracks):
-                self.send_sysex(13, idx, int(self.volArray[idx] * 127), 1)
-                self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5), 2)
+                if track.mixer_device.volume.value != self.volArray[idx]:
+                    self.send_sysex(13, idx, int(self.volArray[idx] * 127), 1)
+                if track.mixer_device.panning.value != self.panArray[idx]:
+                    self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5), 2)
                 for sendNum, send in enumerate(track.mixer_device.sends):
                     if sendNum < 2 and send.value != self.sendArray[track.name][sendNum] :
                         self.send_sysex(13, idx, int(self.sendArray[track.name][sendNum] * 127), 3 + sendNum)
