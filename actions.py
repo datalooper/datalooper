@@ -222,11 +222,13 @@ class Actions:
             if data.data2 == 0:
                 self.jump_to_next_bar()
                 self.call_method_on_all_tracks(track_type, "start", True)
+            else:
+                self.call_method_on_all_tracks(track_type, "start", data.data2, True)
             if self.playing_clips:
                 for clip in self.playing_clips:
                     clip.fire()
                 self.playing_clips = []
-                self.call_method_on_all_tracks(track_type, "start", data.data2, True)
+
         else:
             self.__parent.send_message("toggling stop")
             self.call_method_on_all_tracks(track_type, "stop", data.data2, True)
@@ -374,8 +376,7 @@ class Actions:
         elif mode == LOOPER_MODE:
             self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
             self.song.record_mode = self.state.should_record
-
-
+        self.state.ignore_tempo_control = False
 
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)

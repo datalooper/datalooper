@@ -60,8 +60,8 @@ class DlTrack(Track):
         self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, self.trackNum, (self.trackNum * NUM_CONTROLS) + controlNum)
 
     def record(self, quantized, on_all = False):
-        # self.__parent.send_message(
-        #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
+        self.__parent.send_message(
+            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         if self.rectime == 0 or (time() - self.rectime) > .5:
             if not quantized and self.song.is_playing and self.lastState == CLEAR_STATE:
                 self.send_message("updating to record state")
