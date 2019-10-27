@@ -112,7 +112,10 @@ class ClTrack(Track):
 
     def on_clip_change_timer(self):
         self.remove_clip()
+
     def on_clip_status_change(self):
+        self.send_message("in clip status change on track " + self.track.name)
+
         state = self.check_clip_state()
         if state == STOP_STATE and self.clipStopping:
             self.send_message("changing to stop from clip status change")
@@ -132,7 +135,7 @@ class ClTrack(Track):
         #self.__parent.send_message("Clip status change on track # : " + str(self.trackNum) + " CLIP STATE: " + str(state))
 
     def on_slot_fired(self):
-        #self.send_message("On slot fired. Track # " + str(self.trackNum) + " Track Name: " +  self.track.name + " State: " + str(self.check_clip_state()) + " Fired Slot Index: " + str(self.track.fired_slot_index) + " Playing Slot Index" + str(self.track.playing_slot_index) )
+        self.send_message("On slot fired. Track # " + str(self.trackNum) + " Track Name: " +  self.track.name + " State: " + str(self.check_clip_state()) + " Fired Slot Index: " + str(self.track.fired_slot_index) + " Playing Slot Index" + str(self.track.playing_slot_index) )
         if self.track.arm:
             if (self.track.fired_slot_index >= 0 and self.clipSlot != self.track.clip_slots[self.track.fired_slot_index]) or (self.track.playing_slot_index >= 0 and self.clipSlot != self.track.clip_slots[self.track.playing_slot_index]):
                 self.clipSlot = self.track.clip_slots[self.track.playing_slot_index]
@@ -188,9 +191,8 @@ class ClTrack(Track):
             self.send_message(msg)
     ###### ACTIONS ######
 
-
     def stop(self, quantized, on_all = False):
-        self.send_message("stopping, on_all = " + str(on_all))
+        self.send_message("stopping track" + self.track.name + " , on_all = " + str(on_all))
         if self.track.playing_slot_index >= 0 and (self.track.arm or on_all):
             clip_slot = self.track.clip_slots[self.track.playing_slot_index]
             if clip_slot.clip.is_recording and not clip_slot.clip.is_overdubbing:
@@ -201,6 +203,8 @@ class ClTrack(Track):
                     self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
                 self.clipStopping = True
                 clip_slot.clip.stop()
+                if not self.track.arm:
+                    self.lastState = STOP_STATE
             elif clip_slot.has_clip:
                 self.send_message("muting")
                 self.clipStopping = True

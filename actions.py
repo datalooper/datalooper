@@ -60,7 +60,7 @@ class Actions:
     def check_uniform_state(self, state):
         for tracks in self.tracks.values():
             for track in tracks:
-                # self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
+                self.send_message("track " + str(track.track.name) + " State:" + str(track.lastState))
                 if track.lastState not in state:
                     return False
         return True
