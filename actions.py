@@ -220,6 +220,7 @@ class Actions:
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.__parent.send_message("toggling start")
             if data.data2 == 0:
+                self.state.bpm = self.song.tempo
                 self.jump_to_next_bar()
                 self.call_method_on_all_tracks(track_type, "start", True)
             else:

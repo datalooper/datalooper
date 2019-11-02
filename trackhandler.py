@@ -18,7 +18,7 @@ class TrackHandler:
         self.tracks = tracks
         self.trackStore = []
         self.track_nums = []
-        self.param_store = []
+        # self.param_store = []
         self.state = state
 
     def disconnect(self):
@@ -59,7 +59,7 @@ class TrackHandler:
                         track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
                     self.track_nums.append(track_num)
                     self.append_tracks(track, track_num, key)
-            self.param_store.append(ParamTracker(track, self, self.song, idx))
+            # self.param_store.append(ParamTracker(track, self, self.song, idx))
             # adds name change listener to all tracks
             if not track.name_has_listener(self.__parent.on_track_name_changed):
                 track.add_name_listener(self.__parent.on_track_name_changed)

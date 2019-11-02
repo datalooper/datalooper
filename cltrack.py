@@ -129,7 +129,8 @@ class ClTrack(Track):
                 self.clipStopping = False
                 self.update_state(state)
             elif state == STOP_STATE and not self.clipStopping:
-                self.update_state(CLEAR_STATE)
+                pass
+                # self.update_state(CLEAR_STATE)
             else:
                 self.update_state(state)
         #self.__parent.send_message("Clip status change on track # : " + str(self.trackNum) + " CLIP STATE: " + str(state))
