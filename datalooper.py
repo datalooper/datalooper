@@ -41,33 +41,33 @@ class DataLooper(ControlSurface):
         self.__track_handler = TrackHandler(self, self.song(), self.tracks, self.state, self.__action_handler)
 
         self.song().add_is_playing_listener(self.on_is_playing)
-        self.__track_handler.scan_tracks()
+        self.__track_handler.scan_tracks(True)
         # initializes base obj
         self.live = Live.Application.get_application()
 
         self.song().add_metronome_listener(self.on_metro_change)
         self.send_sysex(0x00, 0x01)
 
-        with self.component_guard():
-            global _map_modes
-            _map_modes = Live.MidiMap.MapMode
-            # mixer
-            global mixer
-            num_tracks = 128
-            num_returns = 24
-            self.mixer = MixerComponent(num_tracks, num_returns)
-            self.map_tracks()
+        # with self.component_guard():
+        #     global _map_modes
+        #     _map_modes = Live.MidiMap.MapMode
+        #     # mixer
+        #     global mixer
+        #     num_tracks = 128
+        #     num_returns = 24
+        #     self.mixer = MixerComponent(num_tracks, num_returns)
+        #     self.map_tracks()
 
-    def map_tracks(self):
-        # activate mode
-        for i in range(0, len(self.song().tracks)):
-            self.mixer.channel_strip(i).set_volume_control(EncoderElement(MIDI_CC_TYPE, 0, i, _map_modes.absolute))
-            self.mixer.channel_strip(i).set_pan_control(EncoderElement(MIDI_CC_TYPE, 1, i, _map_modes.absolute))
-            send_controls = [EncoderElement(MIDI_CC_TYPE, 2, i, _map_modes.absolute), EncoderElement(MIDI_CC_TYPE, 3, i, _map_modes.absolute),
-                             EncoderElement(MIDI_CC_TYPE, 4, i, _map_modes.absolute) ];
-            self.mixer.channel_strip(i).set_send_controls(send_controls)
-            self.mixer.channel_strip(i).set_send_controls(send_controls)
-            self.mixer.channel_strip(i).set_solo_button(ButtonElement(True, MIDI_CC_TYPE, 6, i))
+    # def map_tracks(self):
+    #     # activate mode
+    #     for i in range(0, len(self.song().tracks)):
+    #         self.mixer.channel_strip(i).set_volume_control(EncoderElement(MIDI_CC_TYPE, 0, i, _map_modes.absolute))
+    #         self.mixer.channel_strip(i).set_pan_control(EncoderElement(MIDI_CC_TYPE, 1, i, _map_modes.absolute))
+    #         send_controls = [EncoderElement(MIDI_CC_TYPE, 2, i, _map_modes.absolute), EncoderElement(MIDI_CC_TYPE, 3, i, _map_modes.absolute),
+    #                          EncoderElement(MIDI_CC_TYPE, 4, i, _map_modes.absolute) ];
+    #         self.mixer.channel_strip(i).set_send_controls(send_controls)
+    #         self.mixer.channel_strip(i).set_send_controls(send_controls)
+    #         self.mixer.channel_strip(i).set_solo_button(ButtonElement(True, MIDI_CC_TYPE, 6, i))
 
     def on_is_playing(self):
         if not self.song().is_playing:

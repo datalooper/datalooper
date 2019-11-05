@@ -264,7 +264,7 @@ class ClTrack(Track):
             self.update_state(CLEAR_STATE)
 
     def fire_clip(self, quantized):
-        if self.clipSlot != -1 and quantized and not self.track.implicit_arm:
+        if self.clipSlot != -1 and quantized:
             if self.song.clip_trigger_quantization != Live.Song.Quantization.q_no_q and self.button_num != -1:
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
             self.clipSlot.fire()

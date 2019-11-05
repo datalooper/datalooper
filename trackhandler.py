@@ -18,21 +18,21 @@ class TrackHandler:
         self.tracks = tracks
         self.trackStore = []
         self.track_nums = []
-        # self.param_store = []
+        self.param_store = []
         self.state = state
 
     def disconnect(self):
         self.__parent.disconnect()
 
     # Detects tracks with 'looper' in the title and listens for param changes
-    def scan_tracks(self):
+    def scan_tracks(self, isInit = False):
         self.send_message("scanning for DataLooper tracks")
 
         # clear CL# identified tracks
         self.clear_tracks()
         self.track_nums = []
-        self.iterate_tracks(self.song.tracks)
-        self.iterate_tracks(self.song.return_tracks)
+        self.iterate_tracks(self.song.tracks, isInit)
+        self.iterate_tracks(self.song.return_tracks, isInit)
         self.send_sysex(0x00, 0x01)
 
         for tracks in self.tracks.values():
@@ -43,7 +43,7 @@ class TrackHandler:
                         self.send_message(track)
                         track.disable_led()
 
-    def iterate_tracks(self, tracks):
+    def iterate_tracks(self, tracks, isInit):
 
         # iterate through all tracks
         for idx, track in enumerate(tracks):
@@ -59,11 +59,11 @@ class TrackHandler:
                         track_num = int(track.name[string_pos + 3: string_pos + 4]) - 1
                     self.track_nums.append(track_num)
                     self.append_tracks(track, track_num, key)
-            # self.param_store.append(ParamTracker(track, self, self.song, idx))
+            if isInit:
+                self.param_store.append(ParamTracker(track, self, self.song, idx))
             # adds name change listener to all tracks
             if not track.name_has_listener(self.__parent.on_track_name_changed):
                 track.add_name_listener(self.__parent.on_track_name_changed)
-
 
     def get_led_track(self, tracks):
         for track in tracks:

@@ -24,8 +24,12 @@ class Param:
             elif self.is_first_record:
                 self.timer.start()
                 self.is_first_record = False
+        elif self.song.record_mode and self.value != -999:
+            self.value = self.param.value
+            self.timer.start()
 
     def timer_callback(self):
+        self.parent.send_message("resetting param to min then value")
         self.param.value = self.param.min
         self.param.value = self.value
 
