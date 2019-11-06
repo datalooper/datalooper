@@ -128,9 +128,11 @@ class DataLooper(ControlSurface):
 
     def receive_midi(self, midi_bytes):
         # super(DataLooper,self).receive_midi(midi_bytes)
-
         if len(midi_bytes) != 3:
             self.handle_sysex(midi_bytes)
+        else:
+            self.send_message("non sysex midi received")
+
 
     def receive_midi_cc(self, cc_no, cc_value, channel):
         self.log_message(str(cc_no))
@@ -167,6 +169,8 @@ class DataLooper(ControlSurface):
             9: "change_instance",
             10: "move_session_highlight",
             11: "request_state",
-            12: "request_midi_map_rebuild"
+            12: "request_midi_map_rebuild",
+            13: "unknown",
+            14: "start_recording"
         }
         return action_map.get(argument, "Invalid Action")

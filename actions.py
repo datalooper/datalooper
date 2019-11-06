@@ -19,6 +19,8 @@ class Actions:
         self.timerCounter = 0
         self.quantize_timer = Live.Base.Timer(callback=self.on_quantize_changed_timer_callback, interval=1, repeat=False)
         self.record_timer = Live.Base.Timer(callback=self.record_timer_callback, interval=1, repeat=False)
+        self.current_time_change_timer = Live.Base.Timer(callback=self.current_time_change_timer_callback, interval=1, repeat=False)
+        self.should_start_tracks = False
         self.playing_clips = []
 
         self.scenes = []
@@ -60,7 +62,7 @@ class Actions:
     def check_uniform_state(self, state):
         for tracks in self.tracks.values():
             for track in tracks:
-                self.send_message("track " + str(track.track.name) + " State:" + str(track.lastState))
+                # self.send_message("track " + str(track.track.name) + " State:" + str(track.lastState))
                 if track.lastState not in state:
                     return False
         return True
@@ -215,14 +217,14 @@ class Actions:
             track_type = data.data1
 
         self.state.should_record = self.song.record_mode
-        self.__parent.send_message("toggling stop/start")
-        self.__parent.send_message("uniform clear?: " + str(self.check_uniform_state([CLEAR_STATE])) + " uniform stop or clear state: " + str(self.check_uniform_state([STOP_STATE, CLEAR_STATE])))
+        # self.__parent.send_message("toggling stop/start")
+        # self.__parent.send_message("uniform clear?: " + str(self.check_uniform_state([CLEAR_STATE])) + " uniform stop or clear state: " + str(self.check_uniform_state([STOP_STATE, CLEAR_STATE])))
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.__parent.send_message("toggling start")
             if data.data2 == 0:
                 self.state.bpm = self.song.tempo
                 self.jump_to_next_bar()
-                self.call_method_on_all_tracks(track_type, "start", True)
+                self.should_start_tracks = True
             else:
                 self.call_method_on_all_tracks(track_type, "start", data.data2, True)
             if self.playing_clips:
@@ -338,27 +340,51 @@ class Actions:
 
     def jump_to_next_bar(self):
         self.send_message("jumping to next bar")
-        # self.state.was_recording = self.state.should_record
-        # self.song.add_record_mode_listener(self.on_record_mode_changed)
-        # self.song.record_mode = 0
-        self.song.tempo = self.state.bpm
+        self.state.was_recording = self.song.record_mode
 
-        time = int(self.song.current_song_time) + (self.song.signature_denominator - (
-                int(self.song.current_song_time) % self.song.signature_denominator))
-        self.send_message("song time: " + str(time))
-        self.song.current_song_time = time - (self.state.bpm / 60000 * 40)
-        if self.state.queued is not False:
-            self.state.queued.request_control(MASTER_CONTROL)
-            self.state.queued = False
-            self.change_mode()
-            self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+        if self.song.record_mode:
+            if not self.song.record_mode_has_listener(self.on_record_mode_changed):
+                self.song.add_record_mode_listener(self.on_record_mode_changed)
+            self.song.record_mode = 0
+        elif self.state.should_record:
+            self.record_timer_callback()
+        else:
+            self.set_tempo_jump_time()
+
+    def song_timer_callback(self):
+        if self.song.current_song_time_has_listener(self.song_timer_callback):
+            self.song.remove_current_song_time_listener(self.song_timer_callback)
+        self.send_message("song timer listener callback")
+        self.current_time_change_timer.start()
+
+    def current_time_change_timer_callback(self):
+        self.song.record_mode = True
 
     def on_record_mode_changed(self):
         self.song.remove_record_mode_listener(self.on_record_mode_changed)
         self.record_timer.start()
 
     def record_timer_callback(self):
-        self.song.record_mode = self.state.was_recording
+        if not self.song.current_song_time_has_listener(self.song_timer_callback):
+            self.song.add_current_song_time_listener(self.song_timer_callback)
+        self.set_tempo_jump_time()
+
+    def set_tempo_jump_time(self):
+        self.song.tempo = self.state.bpm
+        time = int(self.song.current_song_time) + (self.song.signature_denominator - (
+                int(self.song.current_song_time) % self.song.signature_denominator))
+        self.send_message("song time: " + str(time))
+        self.song.current_song_time = time - (self.state.bpm / 60000 * 40)
+
+        if self.state.queued is not False:
+            self.state.queued.request_control(MASTER_CONTROL)
+            self.state.queued = False
+            if self.state.mode == NEW_SESSION_MODE:
+                self.change_mode()
+                self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+        if self.should_start_tracks:
+            self.call_method_on_all_tracks(BOTH_TRACK_TYPES, "start", True)
+            self.should_start_tracks = False
 
     def change_mode(self, data=False):
         if not data:
@@ -376,7 +402,7 @@ class Actions:
             self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
         elif mode == LOOPER_MODE:
             self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
-            self.song.record_mode = self.state.should_record
+
         self.state.ignore_tempo_control = False
 
     def send_sysex(self, *data):
@@ -393,3 +419,7 @@ class Actions:
 
     def send_message(self, m):
         self.__parent.send_message(m)
+
+    def start_recording(self, data):
+        self.send_message("start recording sysex received")
+        self.song.record_mode = True
