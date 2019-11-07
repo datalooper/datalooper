@@ -379,9 +379,9 @@ class Actions:
         if self.state.queued is not False:
             self.state.queued.request_control(MASTER_CONTROL)
             self.state.queued = False
-            if self.state.mode == NEW_SESSION_MODE:
-                self.change_mode()
-                self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+            # if self.state.mode == NEW_SESSION_MODE:
+            self.change_mode()
+            self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
         if self.should_start_tracks:
             self.call_method_on_all_tracks(BOTH_TRACK_TYPES, "start", True)
             self.should_start_tracks = False
