@@ -41,7 +41,7 @@ class DataLooper(ControlSurface):
         self.__track_handler = TrackHandler(self, self.song(), self.tracks, self.state, self.__action_handler)
 
         self.song().add_is_playing_listener(self.on_is_playing)
-        self.__track_handler.scan_tracks()
+        self.__track_handler.scan_tracks(True)
         # initializes base obj
         self.live = Live.Application.get_application()
 
