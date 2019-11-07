@@ -48,26 +48,26 @@ class DataLooper(ControlSurface):
         self.song().add_metronome_listener(self.on_metro_change)
         self.send_sysex(0x00, 0x01)
 
-        with self.component_guard():
-            global _map_modes
-            _map_modes = Live.MidiMap.MapMode
-            # mixer
-            global mixer
-            num_tracks = 128
-            num_returns = 24
-            self.mixer = MixerComponent(num_tracks, num_returns)
-            self.map_tracks()
+        # with self.component_guard():
+        #     global _map_modes
+        #     _map_modes = Live.MidiMap.MapMode
+        #     # mixer
+        #     global mixer
+        #     num_tracks = 128
+        #     num_returns = 24
+        #     self.mixer = MixerComponent(num_tracks, num_returns)
+        #     self.map_tracks()
 
-    def map_tracks(self):
-        # activate mode
-        for i in range(0, len(self.song().tracks)):
-            self.mixer.channel_strip(i).set_volume_control(EncoderElement(MIDI_CC_TYPE, 0, i, _map_modes.absolute))
-            self.mixer.channel_strip(i).set_pan_control(EncoderElement(MIDI_CC_TYPE, 1, i, _map_modes.absolute))
-            send_controls = [EncoderElement(MIDI_CC_TYPE, 2, i, _map_modes.absolute), EncoderElement(MIDI_CC_TYPE, 3, i, _map_modes.absolute),
-                             EncoderElement(MIDI_CC_TYPE, 4, i, _map_modes.absolute) ];
-            self.mixer.channel_strip(i).set_send_controls(send_controls)
-            self.mixer.channel_strip(i).set_send_controls(send_controls)
-            self.mixer.channel_strip(i).set_solo_button(ButtonElement(True, MIDI_CC_TYPE, 6, i))
+    # def map_tracks(self):
+    #     # activate mode
+    #     for i in range(0, len(self.song().tracks)):
+    #         self.mixer.channel_strip(i).set_volume_control(EncoderElement(MIDI_CC_TYPE, 0, i, _map_modes.absolute))
+    #         self.mixer.channel_strip(i).set_pan_control(EncoderElement(MIDI_CC_TYPE, 1, i, _map_modes.absolute))
+    #         send_controls = [EncoderElement(MIDI_CC_TYPE, 2, i, _map_modes.absolute), EncoderElement(MIDI_CC_TYPE, 3, i, _map_modes.absolute),
+    #                          EncoderElement(MIDI_CC_TYPE, 4, i, _map_modes.absolute) ];
+    #         self.mixer.channel_strip(i).set_send_controls(send_controls)
+    #         self.mixer.channel_strip(i).set_send_controls(send_controls)
+    #         self.mixer.channel_strip(i).set_solo_button(ButtonElement(True, MIDI_CC_TYPE, 6, i))
 
     def on_is_playing(self):
         if not self.song().is_playing:
@@ -128,9 +128,11 @@ class DataLooper(ControlSurface):
 
     def receive_midi(self, midi_bytes):
         # super(DataLooper,self).receive_midi(midi_bytes)
-
         if len(midi_bytes) != 3:
             self.handle_sysex(midi_bytes)
+        else:
+            self.send_message("non sysex midi received")
+
 
     def receive_midi_cc(self, cc_no, cc_value, channel):
         self.log_message(str(cc_no))
@@ -167,6 +169,8 @@ class DataLooper(ControlSurface):
             9: "change_instance",
             10: "move_session_highlight",
             11: "request_state",
-            12: "request_midi_map_rebuild"
+            12: "request_midi_map_rebuild",
+            13: "unknown",
+            14: "start_recording"
         }
         return action_map.get(argument, "Invalid Action")
