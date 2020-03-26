@@ -48,7 +48,7 @@ class ClMidiTrack(cltrack.ClTrack):
         if self.clipSlot != -1 and self.clipSlot.has_clip and self.clipSlot.clip.is_overdubbing:
             self.endOverdub()
 
-    def undo(self, on_all = False):
+    def undo(self, on_all = False, fadeTime = 0):
         self.undoOverdub()
 
     def overdub(self):

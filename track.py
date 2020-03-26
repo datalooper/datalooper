@@ -15,9 +15,13 @@ class Track(object):
         self.global_state = state
         self.action_handler = action_handler
         self.clearTimerCounter = 0
-        self.parameter = -1
+        self.clearGainParam = -1
+        self.stopGainParam = -1
         self.preClearGain = 0
+        self.preStopGain = 0
         self.clearTimer = -1
+        self.stopTimer = -1
+        self.undo_button = -1
         if self.track.can_be_armed:
             self.orig_arm = self.track.arm
         else:
@@ -39,15 +43,17 @@ class Track(object):
     def stop(self, quantized):
         pass
 
-    def undo(self, on_all = False):
+    def undo(self, on_all = False, fadeTime = 0):
         pass
 
-    def clear(self, fadeTime):
+    def clear(self, on_all = False, fadeTime = 0):
+        self.send_message("fade time: " + str(fadeTime) + " clear timer is false? : " + str(self.clearTimer))
         parameter = self.can_fade()
-        if fadeTime > 0 and parameter:
-            self.parameter = parameter
+        if fadeTime > 0 and parameter and self.clearTimer == -1:
+            self.send_message("starting fade")
+            self.clearGainParam = parameter
             self.preClearGain = parameter.value
-            self.clearTimer = Live.Base.Timer(callback=lambda: self.fade(float(-self.parameter.min / float(fadeTime / 100)), fadeTime / 100), interval=100, repeat=True)
+            self.clearTimer = Live.Base.Timer(callback=lambda: self.fade(float(-self.clearGainParam.min / float(fadeTime / 100)), fadeTime / 100, self.clearGainParam, self.clearTimer, self.preClearGain, self.clear_immediately), interval=100, repeat=True)
             self.clearTimer.start()
         else:
             self.clear_immediately()
@@ -60,26 +66,33 @@ class Track(object):
                         return parameter
         return False
 
-    def fade(self, increment, numRepeats):
-        self.send_message("gain min:" + str(self.parameter.min))
-        if self.parameter is not -1 and self.parameter.value >= self.parameter.min + increment:
-            self.parameter.value = float(self.parameter.value) - increment
+    def fade(self, increment, numRepeats, parameter, timer, firstValue, methodOnComplete):
+        # self.send_message("gain min:" + str(self.parameter.min))
+        if parameter is not -1 and parameter.value >= parameter.min + increment:
+            parameter.value = float(parameter.value) - increment
         else:
+            self.send_message("clearing timer in first else")
+            parameter.value = -1
+            timer.stop()
 
-            self.parameter.value = -1
-            self.clearTimer.stop()
-            self.clearTimerCounter = 0
-            self.clear_immediately()
+            # self.clearTimerCounter = 0
+            self.reset_gain(parameter, firstValue, methodOnComplete)
 
-        if self.clearTimerCounter >= numRepeats:
-            self.clearTimer.stop()
-            self.clearTimerCounter = 0
-        else:
-            self.clearTimerCounter += 1
+        # if self.clearTimerCounter >= numRepeats:
+        #     self.send_message("clearing timer in 2nd else")
+        #     self.clearTimer.stop()
+        #     self.clearTimerCounter = 0
+        # else:
+        #     self.clearTimerCounter += 1
 
     def clear_immediately(self, on_all = False):
-        if self.parameter is not -1:
-            self.parameter.value = self.preClearGain
+        self.clearTimer = -1
+        pass
+
+    def reset_gain(self, parameter, firstValue, methodOnComplete):
+        if parameter is not -1:
+            parameter.value = firstValue
+        methodOnComplete()
 
     def start(self, start_type, on_all = False):
         if self.lastState != CLEAR_STATE:
@@ -96,7 +109,7 @@ class Track(object):
             # self.send_message("current monitoring state: " + str(self.track.current_monitoring_state))
             if self.lastState != state and self.global_state.mode != NEW_SESSION_MODE and self.button_num is not -1:
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.SLOW_BLINK)
-            self.send_message("in update state, updating lastState to " + str(state))
+            self.send_message("in update state, updating lastState to " + str(state) + " on track " + self.track.name)
             self.lastState = state
             if self.button_num is not -1 and not self.led_disabled and ( self.track.arm or self.track.current_monitoring_state is 0):
                 self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
@@ -137,10 +150,22 @@ class Track(object):
     def record_ignoring_state(self, on_all = False):
         pass
 
-    def stop_quantized(self, on_all = False):
-        self.stop(True, on_all)
+    def exclusive_record(self, quantized = True, on_all = False, looperNum = -1):
+        pass
 
-    def stop_immediately(self, on_all = False):
+    def stop_quantized(self, on_all = False, fadeTime = 0):
+        stopGainParam = self.can_fade()
+        if fadeTime > 0 and stopGainParam and self.stopTimer == -1:
+            self.send_message("starting fade")
+            self.stopGainParam = stopGainParam
+            self.preStopGain = stopGainParam.value
+            self.stopTimer = Live.Base.Timer(callback=lambda: self.fade(float(-self.stopGainParam.min / float(fadeTime / 100)), fadeTime / 100, self.stopGainParam, self.stopTimer, self.preStopGain, self.stop_immediately), interval=100, repeat=True)
+            self.stopTimer.start()
+        else:
+            self.stop(True, on_all)
+
+    def stop_immediately(self, on_all = False, fadeTime = 0):
+        self.stopTimer = -1
         self.stop(False, on_all)
 
     def quick_fade_clear(self, on_all = False):
@@ -150,13 +175,15 @@ class Track(object):
         self.clear(1500)
 
     def link_button(self, button_num, action):
-        if action == 'record_quantized' or action == 'record_unquantized' :
+        if action == 'record_quantized' or action == 'record_unquantized' or action == 'exclusive_record':
             self.send_message("linking button: " + str(button_num))
             self.button_num = button_num
             self.request_state()
         elif action == 'toggle_mute':
             self.mute_button = button_num
             self.request_state()
+        elif action == 'undo':
+            self.undo_button = button_num
 
     def toggle_mute(self, on_all = False):
         self.track.mute = not self.track.mute
@@ -167,3 +194,4 @@ class Track(object):
 
     def remove_clip_slot(self, on_all = False):
         pass
+

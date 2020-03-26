@@ -19,6 +19,7 @@ class DlTrack(Track):
         self.req_record = True
         self.__parent = parent
         self.tempState = ""
+        self.undoState = False
         self.send_message("initializing new track num: " + str(self.trackNum))
         self.update_state(self.lastState)
         self.ignore_name_change = False
@@ -54,14 +55,21 @@ class DlTrack(Track):
             else:
                 self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
 
+    def stop_play_toggle(self, on_all = False):
+        if self.lastState == STOP_STATE:
+            self.request_control(MASTER_CONTROL)
+        elif self.lastState == PLAYING_STATE:
+            self.request_control(STOP_CONTROL)
+
+
     def request_control(self, controlNum):
         self.send_message("Requesting control: ")
         self.updateReq = True
         self.__parent.send_sysex(REQUEST_CONTROL_COMMAND, self.trackNum, (self.trackNum * NUM_CONTROLS) + controlNum)
 
     def record(self, quantized, on_all = False):
-        # self.__parent.send_message(
-        #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
+        self.__parent.send_message(
+            "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[STATE].value) + " rec pressed")
         if self.rectime == 0 or (time() - self.rectime) > .5:
             if not quantized and self.song.is_playing and self.lastState == CLEAR_STATE:
                 self.send_message("updating to record state")
@@ -80,6 +88,13 @@ class DlTrack(Track):
                 if self.button_num != -1:
                     self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.FAST_BLINK)
                 self.request_control(MASTER_CONTROL)
+
+    def exclusive_record(self, quantized = True, on_all = False, looperNum = -1):
+        self.send_message("exclusive record looperNum: " + str(looperNum) + " Track Num: " + str(self.trackNum))
+        if looperNum == self.trackNum:
+            self.record(quantized)
+        elif self.lastState == RECORDING_STATE or self.lastState == OVERDUB_STATE:
+            self.record(quantized)
 
     def record_ignoring_state(self, on_all = False):
         self.request_control(RECORD_CONTROL)
@@ -121,9 +136,18 @@ class DlTrack(Track):
         elif self.lastState == PLAYING_STATE:
             self.request_control(STOP_CONTROL)
 
-    def undo(self, on_all = False):
-        if self.lastState != CLEAR_STATE or not self.song.is_playing:
+    def undo(self, on_all = False, fadeTime = 0):
+        if (self.lastState != CLEAR_STATE and self.lastState != RECORDING_STATE) or not self.song.is_playing:
             self.request_control(UNDO_CONTROL)
+            self.undoState = not self.undoState
+        else:
+            self.clear_immediately(on_all)
+            # if self.undoState:
+            #     self.__parent.send_sysex(CLIP_COLOR_COMMAND, self.undo_button, 127, 127, 127, 127, 127, 127)
+            # else:
+            #     self.__parent.send_sysex(CLIP_COLOR_COMMAND, self.undo_button, 0, 0, 0, 0, 0, 0)
+
+
 
         # self.__parent.send_message(
         #     "Looper " + str(self.trackNum) + " state: " + str(self.device.parameters[1].value) + " undo pressed")
@@ -179,6 +203,9 @@ class DlTrack(Track):
         self.request_control(PLAY_CONTROL)
 
     def update_state(self, state):
+        if state == CLEAR_STATE:
+            self.undoState = False
+
         if self.device and self.device.name != str(state) and not (state is STOP_STATE and self.device.name is str(CLEAR_STATE)) and self.updateReq:
             self.updateReq = False
             self.tempState = state
@@ -195,3 +222,9 @@ class DlTrack(Track):
             self.send_message("updating state based on device name")
             self.update_state(int(self.device.name))
         self.ignore_name_change = False
+
+    def clear(self, on_all = False, fadeTime = 0):
+        if self.lastState == CLEAR_STATE or self.lastState == RECORDING_STATE:
+            self.clear_immediately()
+        else:
+            super(DlTrack, self).clear(on_all, fadeTime)

@@ -19,6 +19,8 @@ CLIP_COLOR_COMMAND = 4
 BLINK = 5
 SONG_STOPPED_COMMAND = 11
 CHANGE_MODE_COMMAND = 12
+START_RECORDING_COMMAND = 13
+
 NOTE_TYPE = 0
 
 DATALOOPER_KEY = 'DL#'
@@ -101,13 +103,15 @@ LOOPER_ACTIONS = {
     2 : 'stop_quantized',
     3 : 'stop_immediately',
     4 : 'undo',
-    5 : 'clear_immediately',
+    5 : 'clear',
     6 : 'quick_fade_clear',
     7 : 'long_fade_clear',
     8 : 'toggle_mute',
     9 : 'remove_clip_slot',
     10 : 'record_ignoring_state',
-    11 : 'play'
+    11 : 'play',
+    12 : 'exclusive_record',
+    13 : 'stop_play_toggle'
 }
 
 

@@ -7,6 +7,7 @@ import math
 from scene import Scene
 from clip import Clip
 from mute import Mute
+from solo import Solo
 from collections import defaultdict
 
 class Actions:
@@ -17,21 +18,16 @@ class Actions:
         self.song = song
         self.__parent = parent
         self.timerCounter = 0
-        # self.tempo_change_timer = Live.Base.Timer(callback=self.execute_tempo_change, interval=1, repeat=True)
         self.quantize_timer = Live.Base.Timer(callback=self.on_quantize_changed_timer_callback, interval=1, repeat=False)
-        # self.song.add_tempo_listener(self.on_tempo_change)
-        # self.song.add_current_song_time_listener(self.after_jump)
-        # self.timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
-        self.jumpTimer = Live.Base.Timer(callback=self.on_jump_callback, interval=300, repeat=False)
-        # self.startStopTimer = Live.Base.Timer(callback=self.on_start_stop_callback, interval=1, repeat=False)
-
+        self.record_timer = Live.Base.Timer(callback=self.record_timer_callback, interval=1, repeat=False)
+        self.current_time_change_timer = Live.Base.Timer(callback=self.current_time_change_timer_callback, interval=1, repeat=False)
+        self.should_start_tracks = False
         self.playing_clips = []
-        # self.tempo_timer = Live.Base.Timer(callback=self.on_tempo_change_callback, interval=1, repeat=False)
-        self.rec_timer = Live.Base.Timer(callback=self.on_rec_callback, interval=1, repeat=False)
 
         self.scenes = []
         self.clips = []
         self.mutes = []
+        self.solo = Solo(self, self.song, self.tracks)
         self.song.add_scenes_listener(self.on_scene_change)
         self.lastQuantization = -1
 
@@ -49,13 +45,6 @@ class Actions:
     def update_tracks(self, tracks):
         # self.__parent.send_message("updating tracks")
         self.tracks = tracks
-
-    @staticmethod
-    def get_track_num(data):
-        return data.instance * (NUM_TRACKS * NUM_BANKS) + (data.bank * NUM_TRACKS) + data.looper_num
-
-    def get_track_num_str(self, data):
-        return str(self.get_track_num(data))
 
     def call_method_on_tracks(self, track_num, track_type, method_name, *args):
         tracks = self.tracks.get(str(track_num))
@@ -75,7 +64,7 @@ class Actions:
     def check_uniform_state(self, state):
         for tracks in self.tracks.values():
             for track in tracks:
-                # self.send_message("track " + str(track.trackNum) + " State:" + str(track.lastState))
+                # self.send_message("track " + str(track.track.name) + " State:" + str(track.lastState))
                 if track.lastState not in state:
                     return False
         return True
@@ -101,10 +90,22 @@ class Actions:
         #data3 = looper type (CL# or DL#)
 
         action = LOOPER_ACTIONS.get(data.data2)
-        if data.data1 == 0:
-            self.call_method_on_all_tracks(data.data3, action, True)
+
+        if action == LOOPER_ACTIONS.get(12):
+            self.send_message("Exclusive rec: data1: " + str(data.data1))
+            self.call_method_on_all_tracks(data.data3, action, True, data.data4, data.data1-1)
+        elif data.data1 == 0:
+            if data.data4:
+                data.data4 = (data.data4 / 127.) * 5000
+                self.call_method_on_all_tracks(data.data3, action, True, data.data4)
+            else:
+                self.call_method_on_all_tracks(data.data3, action, True)
         else:
-            self.call_method_on_tracks(data.data1-1, data.data3, action, False)
+            if data.data4:
+                data.data4 = (data.data4 / 127.) * 5000
+                self.call_method_on_tracks(data.data1-1, data.data3, action, False, data.data4)
+            else:
+                self.call_method_on_tracks(data.data1-1, data.data3, action, False)
 
     def clip_control(self, data):
         # 0, 1, 2 || 4, 5, 6 || 8, 9, 10
@@ -121,6 +122,7 @@ class Actions:
 
     def change_instance(self, data):
         self.send_message("changing instance")
+        self.send_message(str(data))
         for scene in self.scenes:
             scene.remove()
             scene.buttonNum = -1
@@ -173,13 +175,8 @@ class Actions:
                 mute = Mute(self, data.data1, data.data3, data.data4, self.song, self.tracks)
                 self.mutes.append(mute)
             mute.request_state()
-
-        # # button #
-        # self.__parent.send_message(data.data1)
-        # # action #
-        # self.__parent.send_message(data.data2)
-        # # data #
-        # self.__parent.send_message(data.data3)
+        elif method == "solo_control" :
+            self.solo.link_button(data.data1, data.data3-1)
 
     def is_mute_linked(self, buttonNum):
         for mute in self.mutes:
@@ -210,31 +207,6 @@ class Actions:
         else:
             return None
 
-    ##### BANKING ACTIONS #####
-
-    # def update_bank(self, data):
-    #     self.__parent.send_message("updating bank: " + str(data.looper_num))
-    #     self.check_arm_conflicts(data)
-    #     data.bank = data.looper_num
-    #     if self.song.is_playing:
-    #         self.__parent.send_sysex(CHANGE_BANK_COMMAND,data.looper_num, data.looper_num)
-    #     self.call_method_on_bank(data, BOTH_TRACK_TYPES, "update_state", -1)
-    #
-    # def check_arm_conflicts(self, data):
-    #     old_bank = data.bank
-    #     new_bank = data.looper_num
-    #     x = 0
-    #     while x < 3:
-    #         new_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (new_bank * NUM_TRACKS) + x))
-    #         old_tracks = self.tracks.get(str((data.instance * NUM_TRACKS * NUM_BANKS) + (old_bank * NUM_TRACKS) + x))
-    #         if old_tracks is not None:
-    #             for old_track in old_tracks:
-    #                 if new_tracks is not None:
-    #                     for new_track in new_tracks:
-    #                         if new_track.track.input_routing_type.display_name == old_track.track.input_routing_type.display_name:
-    #                             old_track.track.arm = False
-    #                         new_track.track.arm = True
-    #         x += 1
 
     ##### EFFECT ALL DATALOOPER TRACKS ACTIONS #####
 
@@ -262,18 +234,21 @@ class Actions:
             track_type = data.data1
 
         self.state.should_record = self.song.record_mode
-        self.__parent.send_message("toggling stop/start")
-        self.__parent.send_message("uniform clear?: " + str(self.check_uniform_state([CLEAR_STATE])) + " uniform stop or clear state: " + str(self.check_uniform_state([STOP_STATE, CLEAR_STATE])))
+        # self.__parent.send_message("toggling stop/start")
+        # self.__parent.send_message("uniform clear?: " + str(self.check_uniform_state([CLEAR_STATE])) + " uniform stop or clear state: " + str(self.check_uniform_state([STOP_STATE, CLEAR_STATE])))
         if not self.check_uniform_state([CLEAR_STATE]) and self.check_uniform_state([STOP_STATE, CLEAR_STATE]):
             self.__parent.send_message("toggling start")
             if data.data2 == 0:
+                self.state.bpm = self.song.tempo
                 self.jump_to_next_bar()
-            self.call_method_on_all_tracks(track_type, "start", data.data2)
+                self.should_start_tracks = True
+            else:
+                self.call_method_on_all_tracks(track_type, "start", data.data2, True)
             if self.playing_clips:
                 for clip in self.playing_clips:
                     clip.fire()
                 self.playing_clips = []
-            self.call_method_on_all_tracks(track_type, "start", data.data2, True)
+
         else:
             self.__parent.send_message("toggling stop")
             self.call_method_on_all_tracks(track_type, "stop", data.data2, True)
@@ -292,26 +267,6 @@ class Actions:
             if mute.mute_type is data.data1 and mute.mute_what is data.data2:
                 mute.execute_mute()
 
-    # def execute_mute(self, mute_type, track):
-    #     # mute = 0
-    #     # unmute = 1
-    #     # toggle = 2
-    #     self.send_message("mute requested on :" + str(track.name) + " mute type:" + str(mute_type))
-    #     if mute_type is 0:
-    #         self.state.muted_tracks.append(track)
-    #         track.mute = True
-    #     elif mute_type is 1:
-    #         if track in self.state.muted_tracks:
-    #             self.state.muted_tracks.remove(track)
-    #         track.mute = False
-    #     elif mute_type is 2:
-    #         if track in self.state.muted_tracks:
-    #             self.state.muted_tracks.remove(track)
-    #             track.mute = False
-    #         else:
-    #             track.mute = True
-    #             self.state.muted_tracks.append(track)
-
     ##### EFFECT ENTIRE SESSION #####
 
     def on_scene_change(self):
@@ -327,7 +282,7 @@ class Actions:
             self.state.sceneOffset -= 1
         elif data.data1 == 1:
             self.state.sceneOffset += 1
-        elif data.data1 == 2 and self.state.trackOffset > 0 :
+        elif data.data1 == 2 and self.state.trackOffset > 0:
             self.state.trackOffset -= 1
         elif data.data1 == 3:
             self.state.trackOffset += 1
@@ -402,55 +357,51 @@ class Actions:
 
     def jump_to_next_bar(self):
         self.send_message("jumping to next bar")
-        self.state.was_recording = self.state.should_record
-        self.song.record_mode = 0
-        self.song.tempo = self.state.bpm
+        self.state.was_recording = self.song.record_mode
 
+        if self.song.record_mode:
+            if not self.song.record_mode_has_listener(self.on_record_mode_changed):
+                self.song.add_record_mode_listener(self.on_record_mode_changed)
+            self.song.record_mode = 0
+        elif self.state.should_record:
+            self.record_timer_callback()
+        else:
+            self.set_tempo_jump_time()
+
+    def song_timer_callback(self):
+        if self.song.current_song_time_has_listener(self.song_timer_callback):
+            self.song.remove_current_song_time_listener(self.song_timer_callback)
+        self.send_message("song timer listener callback")
+        self.current_time_change_timer.start()
+
+    def current_time_change_timer_callback(self):
+        self.song.record_mode = True
+
+    def on_record_mode_changed(self):
+        self.song.remove_record_mode_listener(self.on_record_mode_changed)
+        self.record_timer.start()
+
+    def record_timer_callback(self):
+        if not self.song.current_song_time_has_listener(self.song_timer_callback):
+            self.song.add_current_song_time_listener(self.song_timer_callback)
+        self.set_tempo_jump_time()
+
+    def set_tempo_jump_time(self):
+        self.song.tempo = self.state.bpm
         time = int(self.song.current_song_time) + (self.song.signature_denominator - (
                 int(self.song.current_song_time) % self.song.signature_denominator))
         self.send_message("song time: " + str(time))
-        self.song.current_song_time = time - (self.state.bpm / 60000 * 40)
+
         if self.state.queued is not False:
             self.state.queued.request_control(MASTER_CONTROL)
             self.state.queued = False
-        self.song.record_mode = self.state.was_recording
-
-        self.change_mode()
-        self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
-
-        # if self.song.tempo != self.state.bpm:
-        #     if self.song.tempo_has_listener(self.on_tempo_change):
-        #         self.song.remove_tempo_listener(self.on_tempo_change)
-        #     self.song.add_tempo_listener(self.on_tempo_change)
-        #     self.song.tempo = self.state.bpm
-        # else:
-        #     self.song.record_mode = self.state.was_recording
-
-    # def after_jump(self):
-    #     self.song.remove_current_song_time_listener(self.after_jump)
-    #     self.startStopTimer.start()
-    #
-    # def on_start_stop_callback(self):
-    #     if self.song.tempo != self.state.bpm:
-    #         if self.song.tempo_has_listener(self.on_tempo_change):
-    #             self.song.remove_tempo_listener(self.on_tempo_change)
-    #         self.song.add_tempo_listener(self.on_tempo_change)
-    #         self.song.tempo = self.state.bpm
-    #     else:
-    #         self.song.record_mode = self.state.was_recording
-    #
-    # def on_tempo_change(self):
-    #     self.tempo_timer.start()
-    #     self.song.remove_tempo_listener(self.on_tempo_change)
-    #
-    # def on_tempo_change_callback(self):
-    #     self.song.record_mode = self.state.was_recording
-
-    # def on_jump_callback(self):
-    #     if self.state.req_tempo_change:
-    #         self.song.tempo = self.state.bpm
-    #         self.song.record_mode = self.state.was_recording
-    #         self.state.req_tempo_change = False
+            # if self.state.mode == NEW_SESSION_MODE:
+            self.change_mode()
+            self.__parent.send_sysex(CHANGE_MODE_COMMAND, 0)
+        if self.should_start_tracks:
+            self.call_method_on_all_tracks(BOTH_TRACK_TYPES, "start", True)
+            self.should_start_tracks = False
+        self.song.current_song_time = time - (self.state.bpm / 60000 * 20)
 
     def change_mode(self, data=False):
         if not data:
@@ -459,66 +410,24 @@ class Actions:
             mode = data.data1
         self.state.change_mode(self.__parent, mode)
 
-        self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
         self.__parent.send_message("mode change to: " + str(mode))
 
-        if mode == NEW_SESSION_MODE and self.song.record_mode:
-            self.state.should_record = self.song.record_mode
-            # [track][name][value]...build array at beginning of project, set listener for movement...if movement, set flag to re-send param
-            # after sending out param, set 'first time' value to false
-
-            self.volArray = []
-            self.panArray = []
-            self.sendArray = defaultdict(list)
-            self.paramArray = []
-            for track in self.song.tracks:
-                self.send_message("track: " + str(track.name) + " vol:" + str(track.mixer_device.volume.value))
-                self.volArray.append(track.mixer_device.volume.value)
-                self.panArray.append(track.mixer_device.panning.value)
-                self.send_message("track: " + str(track.name) + " pan:" + str(int((track.mixer_device.panning.value + 1) * 63.5)))
-                for idx, send in enumerate(track.mixer_device.sends):
-                    if idx < 2:
-                        self.sendArray[track.name].append(send.value)
-                for device in track.devices:
-                    for param in device.parameters:
-                        self.paramArray.append(param.value)
-
-            self.song.add_record_mode_listener(self.on_record_mode_changed)
-            self.song.record_mode = False
+        if mode == NEW_SESSION_MODE:
+            if self.song.record_mode:
+                self.state.should_record = self.song.record_mode
+                self.song.record_mode = False
+            self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
         elif mode == LOOPER_MODE:
-            self.song.record_mode = self.state.should_record
+            self.call_method_on_all_tracks(BOTH_TRACK_TYPES,"change_mode")
 
-    def on_record_mode_changed(self):
-        self.rec_timer.start()
-        self.song.remove_record_mode_listener(self.on_record_mode_changed)
-
-    def on_rec_callback(self):
-        if self.song.record_mode:
-            pass
-        else:
-            self.song.add_record_mode_listener(self.on_record_mode_changed)
-            paramNum = 0
-            for idx, track in enumerate(self.song.tracks):
-                if track.mixer_device.volume.value != self.volArray[idx]:
-                    self.send_sysex(13, idx, int(self.volArray[idx] * 127), 1)
-                if track.mixer_device.panning.value != self.panArray[idx]:
-                    self.send_sysex(13, idx, int((self.panArray[idx] + 1) * 63.5), 2)
-                for sendNum, send in enumerate(track.mixer_device.sends):
-                    if sendNum < 2 and send.value != self.sendArray[track.name][sendNum] :
-                        self.send_sysex(13, idx, int(self.sendArray[track.name][sendNum] * 127), 3 + sendNum)
-                # potentially not necessary to go through every param and compare...could try set operation and ableton may have its own check
-                for device in track.devices:
-                    for param in device.parameters:
-                        if param.value != self.paramArray[paramNum]:
-                            param.value = self.paramArray[paramNum]
-                        paramNum += 1
-            #self.jumpTimer.start()
-
-    def on_jump_callback(self):
-        self.song.record_mode = True
+        self.state.ignore_tempo_control = False
 
     def send_sysex(self, *data):
         self.__parent.send_sysex(*data)
+
+    def solo_control(self, data):
+        self.send_message("executing solo control")
+        self.solo.execute_solo(data.data1 - 1, data.data2, data.data3)
 
     # def execute_tempo_change(self):
     # # kills timer after 50ms just in case it wants to run forever for some reason
@@ -531,3 +440,7 @@ class Actions:
 
     def send_message(self, m):
         self.__parent.send_message(m)
+
+    def start_recording(self, data):
+        self.send_message("start recording sysex received")
+        self.song.record_mode = True
