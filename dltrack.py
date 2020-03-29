@@ -138,6 +138,7 @@ class DlTrack(Track):
 
     def undo(self, on_all = False, fadeTime = 0):
         if (self.lastState != CLEAR_STATE and self.lastState != RECORDING_STATE) or not self.song.is_playing:
+            self.send_message("requesting undo command")
             self.request_control(UNDO_CONTROL)
             self.undoState = not self.undoState
         else:

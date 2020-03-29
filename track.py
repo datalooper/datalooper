@@ -111,7 +111,7 @@ class Track(object):
                 self.__parent.send_sysex(BLINK, self.button_num, BlinkTypes.SLOW_BLINK)
             self.send_message("in update state, updating lastState to " + str(state) + " on track " + self.track.name)
             self.lastState = state
-            if self.button_num is not -1 and not self.led_disabled and ( self.track.arm or self.track.current_monitoring_state is 0):
+            if self.button_num is not -1 and not self.led_disabled and (self.track in self.song.return_tracks or self.track.arm or self.track.current_monitoring_state is 0):
                 self.send_message("updating state on track num: " + str(self.trackNum) + " from state: " + str(self.lastState) + " to: " + str(state) + " track name: " + self.track.name)
                 self.__parent.send_sysex(CHANGE_STATE_COMMAND, self.button_num, self.lastState)
             if self.lastState == PLAYING_STATE or self.lastState == OVERDUB_STATE:
